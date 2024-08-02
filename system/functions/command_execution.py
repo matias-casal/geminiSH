@@ -1,16 +1,13 @@
-import os
 import platform
-
+import subprocess
 
 def command_execution(command: str) -> str:
     """Execute a command and return the result."""
-    print("Operating System: " + platform.system() + ", OS Version: " +
-          platform.version() + ", Architecture: " + platform.machine())
     try:
-        result = os.system(command)
-    except Exception as e:
-        return f"[command]{command}[/command][error]{e}[/error]"
-    return f"[command]{command}[/command][result]{result}[/result]"
+        result = subprocess.check_output(command, shell=True, text=True)
+        return f"[command]{command}[/command][result]{result.strip()}[/result]"
+    except subprocess.CalledProcessError as e:
+        return f"[command]{command}[/command][error]{e.stderr.strip()}[/error]"
 
 
 functions_declaration = [{

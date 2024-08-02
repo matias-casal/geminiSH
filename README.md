@@ -1,8 +1,8 @@
-# geminiWorkstation
+# geminiSH
 
 ## Description
 
-`geminiWorkstation` is a versatile tool designed to facilitate working across different code bases. It leverages Google's Gemini technology to enhance productivity and streamline code management tasks.
+`geminiSH` is a versatile tool designed to facilitate working across different code bases. It leverages Google's Gemini technology to enhance productivity and streamline code management tasks.
 
 ## Features
 
@@ -13,7 +13,7 @@
 
 ## Installation
 
-To install `geminiWorkstation`, run the following command:
+To install `geminiSH`, run the following command:
 
 ```bash
 pip install .
@@ -26,7 +26,7 @@ Ensure you are in the project directory where `setup.py` is located.
 After installation, you can start the workstation by running:
 
 ```bash
-geminiWorkstation
+geminiSH
 ```
 
 Follow the on-screen prompts to navigate through the various functionalities.
@@ -45,4 +45,4 @@ For any inquiries, please reach out to Matias Casal at [tempo-rices01@icloud.com
 
 ## Acknowledgments
 
-Thanks to all contributors and users who are testing and improving `geminiWorkstation`.
+Thanks to all contributors and users who are testing and improving `geminiSH`.
