@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='geminiWorkstation',
+    name='geminiSH',
     version='0.1.0',
     packages=find_packages(),
     description='Tool based on Google`s Gemini to work on diferents code bases.',
@@ -9,7 +9,7 @@ setup(
     long_description_content_type='text/markdown',
     author='Matias Casal',
     author_email='tempo-rices01@icloud.com',
-    url='https://github.com/matias-casal/geminiWorkstation',
+    url='https://github.com/matias-casal/geminiSH',
     install_requires=[
         'rich',
         'argparse',
@@ -21,7 +21,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'geminiWorkstation=geminiWorkstation.main:main',
+            'geminiSH=geminiSH.main:main',
         ],
     },
     include_package_data=True,
