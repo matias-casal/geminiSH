@@ -1,7 +1,6 @@
 [
   {
     "description": "Let's Talk",
-    "debug_menu": true,
     "inputs": [
       {
         "name": "request",
@@ -35,6 +34,33 @@
     ]
   },
   {
+    "description": "Continue previous conversation",
+    "main_menu": true,
+    "actions": [
+      {
+        "function": "continue_chat"
+      }
+    ]
+  },
+  {
+    "description": "List cached documents",
+    "main_menu": true,
+    "actions": [
+      {
+        "function": "list_cached_documents"
+      }
+    ]
+  },
+  {
+    "description": "Use cached document",
+    "main_menu": true,
+    "actions": [
+      {
+        "function": "use_cached_document"
+      }
+    ]
+  },
+  {
     "description": "Trivia Game",
     "main_menu": true,
     "actions": [
@@ -58,36 +84,6 @@
     "actions": [
       {
         "function": "show_available_modes"
-      }
-    ]
-  },
-  {
-    "description": "Set workspace.",
-    "debug_menu": true,
-    "actions": [
-      {
-        "function": "set_workspace"
-      },
-      {
-        "function": "recreate_data_file"
-      }
-    ]
-  },
-  {
-    "description": "Recreate text file with the data in the workspace.",
-    "debug_menu": true,
-    "actions": [
-      {
-        "function": "recreate_data_file"
-      }
-    ]
-  },
-  {
-    "description": "Delete all in the workspace.",
-    "debug_menu": true,
-    "actions": [
-      {
-        "function": "delete_workspace"
       }
     ]
   }

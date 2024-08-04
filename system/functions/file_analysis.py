@@ -2,7 +2,6 @@
 import os
 import mimetypes
 import google.generativeai as genai
-from google.generativeai.types import content_types, file_types
 from rich.console import Console
 
 console = Console()
@@ -19,8 +18,21 @@ SUPPORTED_MIME_TYPES = [
 ]
 
 def upload_and_describe_file(file_path: str) -> genai.types.File:
-    """Uploads a file using genai.upload_file and returns the uploaded file object."""
+    """
+    Uploads a file using genai.upload_file and returns the uploaded file object. 
+    The object can be used by other functions for analysis.
 
+    Parameters:
+    file_path (str): The path to the file to upload.
+
+    Returns:
+    genai.types.File: The uploaded file object.
+
+    Raises:
+    FileNotFoundError: If the file does not exist at the specified path.
+    TypeError: If the file type is not supported.
+    RuntimeError: If there is an error during the file upload.
+    """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Error: File not found: {file_path}")
 
@@ -41,12 +53,3 @@ def upload_and_describe_file(file_path: str) -> genai.types.File:
     except Exception as e:
         raise RuntimeError(f"Error uploading file: {e}")
 
-
-functions_declaration = [{
-    "name": "upload_and_describe_file",
-    "description": "Uploads a file using genai.upload_file and returns the uploaded file object. The object can be used by other functions for analysis.",
-    "parameters": {
-        "file_path": {"type": 'string', "description": "The path to the file to upload."}
-    },
-    "returns": {"type": "object", "description": "The uploaded file object."}
-}]

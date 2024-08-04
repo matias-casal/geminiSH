@@ -1,5 +1,5 @@
 {
-  "workspace_dir": {
+  "scrape_data_rules": {
     "exclude_filenames": [".DS_Store"],
     "exclude_extensions": [
       ".png",
