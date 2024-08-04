@@ -9,6 +9,7 @@ import shutil
 import requests
 import traceback
 import importlib.util
+import platform
 
 from git import Repo
 from shutil import copy
@@ -29,32 +30,22 @@ from prompt_toolkit.shortcuts import CompleteStyle
 import google.generativeai as genai
 import google.api_core.exceptions
 
-from google.protobuf.json_format import MessageToJson
+from google.protobuf.json_format import MessageToDict
 from google.ai.generativelanguage import (
-    FunctionDeclaration,
-    Tool,
-    Schema,
-    Type,
-    GenerateContentRequest,
     Content,
+    Tool
 )
 
 DEBUG = os.getenv("DEBUG", False)
-MODEL_NAME = os.getenv("MODEL_NAME", "gemini-1.5-pro-exp-0801")
-DATA_DIR = os.getenv("DATA_DIR", "data")
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-1.5-pro-latest")
 CACHE_DIR = os.getenv("CACHE_DIR", "cache")
 SYSTEM_DIR = os.getenv("SYSTEM_DIR", "system")
 MAX_OUTPUT_TOKENS = os.getenv("MAX_OUTPUT_TOKENS", 4000)
 SAVE_PROMPT_HISTORY = os.getenv("SAVE_PROMPT_HISTORY", True)
 SAVE_OUTPUT_HISTORY = os.getenv("SAVE_OUTPUT_HISTORY", True)
-WORKSTATION_DIR = os.getenv("WORKSTATION_DIR", "workstation")
-WORKSTATION_ORIGINAL_DIR = os.getenv(
-    "WORKSTATION_ORIGINAL_DIR", WORKSTATION_DIR + "/original"
-)
-WORKSTATION_EDITED_DIR = os.getenv(
-    "WORKSTATION_EDITED_DIR", WORKSTATION_DIR + "/edited"
-)
 FEEDBACK_TIMEOUT = int(os.getenv("FEEDBACK_TIMEOUT", 4))
+MAX_TOKENS = 2097152
+WARNING_THRESHOLD = 0.9
 
 console = Console()
 session = PromptSession(
@@ -62,6 +53,10 @@ session = PromptSession(
     auto_suggest=AutoSuggestFromHistory(),
     complete_style=CompleteStyle.READLINE_LIKE,
 )
+
+loaded_functions = []
+function_declarations = []
+chat_history = {}
 
 
 def option_timer(
@@ -71,10 +66,8 @@ def option_timer(
     responseOnESC=False,
     timeout=FEEDBACK_TIMEOUT,
 ):
-    """
-    Display a prompt with a countdown timer. Return True if the user presses Enter before the timer expires, otherwise return False.
-    """
-    user_input = [None]  # Use a list to hold the mutable reference
+    """Display a prompt with a countdown timer. Return True if the user presses Enter before the timer expires, otherwise return False."""
+    user_input = [None]
     time_start = time.time()
 
     def wait_for_input(timeout):
@@ -97,7 +90,7 @@ def option_timer(
                     f"[bold yellow]Continues in {int(remaining)} secs[/bold yellow] - {instruction}"
                 )
     except KeyboardInterrupt:
-        exit_program()
+        _exit_program()
     finally:
         if input_thread.is_alive():
             input_thread.join()
@@ -110,40 +103,76 @@ def option_timer(
         return responseOnTimeout
 
 
-def create_function_declaration(func):
-    """
-    Create a function declaration from a function object.
-    """
-    from inspect import signature, _empty
-
-    sig = signature(func)
-    parameters = {}
-    required = []
-
-    for param_name, param in sig.parameters.items():
-        param_type = (
-            str(param.annotation).split("'")[1] if param.annotation != _empty else "string"
-        )
-        schema_type = Type.STRING if param_type == "string" else Type.NUMBER
-        # Define el tipo de parámetro directamente dentro de 'parameters'
-        parameters[param_name] = Schema(
-            type_=schema_type, description=f"The {param_name} of the function."
-        )
-        if param.default is _empty:
-            required.append(param_name)
-
-    return FunctionDeclaration(
-        name=func.__name__,
-        description=func.__doc__,
-        parameters=Schema(type_=Type.OBJECT, properties=parameters, required=required),
-    )
-
-
-def show_available_modes(previous_results, user_inputs):
+def _show_available_modes(previous_results, user_inputs):
     """Displays available Gemini models."""
     for m in genai.list_models():
         if "generateContent" in m.supported_generation_methods:
             console.print(m.name)
+
+
+def _show_help(previous_results, user_inputs):
+    """Displays instructions on using the tool."""
+    # Fetch the content of INFO.md from the root of the project and display it using Markdown
+    with open("INFO.md", "r", encoding="utf-8") as file:
+        info_content = file.read()
+    console.print(Markdown(info_content, justify="left"), style="italic light_coral")
+
+
+def _exit_program():
+    """Exits the program gracefully."""
+    console.print("\n\nExiting program...", style="bold red")
+    exit(0)
+
+
+def _handle_sigint(signum, frame):
+    """Handles the SIGINT signal (Ctrl+C)."""
+    _exit_program()
+
+
+def _load_config():
+    """Load configuration from a JSON file."""
+    with open(os.path.join(SYSTEM_DIR, "rules.json"), "r") as config_file:
+        return json.load(config_file)
+
+
+def _update_data_txt(filename, content):
+    """Updates the data.txt file with processed information from files."""
+    data_txt_path = Path(CACHE_DIR) / "data.txt"
+    filename = Path(filename).resolve()
+
+    try:
+        relative_path = filename.relative_to(Path.cwd())
+        marker = f"```{relative_path}\n"
+    except ValueError:
+        console.print(f"Warning: Could not determine relative path for '{filename}'", style="yellow")
+        marker = f"```{filename}\n"
+
+    # Dividir el contenido en líneas y agregar el número de línea
+    lines = content.splitlines()
+    numbered_lines = [
+        f"[LINE {i + 1}] {line}\n" for i, line in enumerate(lines)
+    ]
+    new_entry = f"{marker}{''.join(numbered_lines)}```\n"
+
+    if data_txt_path.exists():
+        with open(data_txt_path, "r+", encoding="utf-8") as file:
+            existing_content = file.read()
+            start_idx = existing_content.find(marker)
+            if start_idx != -1:
+                end_idx = existing_content.find(
+                    "\n```", start_idx + len(marker))
+                if end_idx == -1:
+                    end_idx = len(existing_content)
+                updated_content = existing_content[:start_idx] + \
+                    new_entry + existing_content[end_idx:]
+            else:
+                updated_content = existing_content + new_entry
+            file.seek(0)
+            file.write(updated_content)
+            file.truncate()
+    else:
+        with open(data_txt_path, 'w', encoding='utf-8') as file:
+            file.write(new_entry)
 
 
 def handle_errors(func):
@@ -167,13 +196,13 @@ def handle_errors(func):
             elif choice == "2":
                 display_menu()  # Volver al menú principal
             elif choice == "3":
-                exit_program()  # Salir del programa
+                _exit_program()  # Salir del programa
             return None
 
     return wrapper
 
 
-def check_api_key():
+def _check_api_key():
     """Check if the GOOGLE_API_KEY environment variable is set. If not, prompt the user to set it."""
     try:
         api_key = os.environ["GOOGLE_API_KEY"]
@@ -187,10 +216,13 @@ def check_api_key():
         genai.configure(api_key=api_key)
 
 
-def load_functions_from_directory(
-    directory=os.path.join(SYSTEM_DIR, "functions"),
-):
-    """Load Python functions from a directory and create their declarations."""
+def _load_functions_from_directory(directory=os.path.join(SYSTEM_DIR, "functions")):
+    """
+    Load Python functions from a directory and create their declarations.
+    The functions are loaded into the `loaded_functions` and `function_declarations` variables,
+    and also added to the global scope.
+    """
+    global loaded_functions, function_declarations
     loaded_functions = []
     function_declarations = []
     for filename in os.listdir(directory):
@@ -213,61 +245,36 @@ def load_functions_from_directory(
                         and not isinstance(func, type)
                         and not func_name.startswith("__")
                     ):
-                        if any(
-                            d["name"] == func_name
-                            for d in getattr(module, "functions_declaration", [])
-                        ):
-                            loaded_functions.append(func)
-                            # Add function to custom namespace
-                            module_namespace[func_name] = func
-                            # Add function to global scope
-                            globals()[func_name] = func
-                            try:
-                                func_decl = create_function_declaration(func)
-                                function_declarations.append(func_decl)
-                            except Exception as e:
-                                console.print(
-                                    f"Error creating function declaration for {func_name}: {str(e)}",
-                                    style="bold red",
-                                )
-                        else:
-                            console.print(
-                                f"Warning: Function {func_name} in {filename} is not declared in functions_declaration.",
-                                style="bold yellow",
-                            )
+                        loaded_functions.append(func)
+                        # Add function to custom namespace
+                        module_namespace[func_name] = func
+                        # Add function to global scope
+                        globals()[func_name] = func
             finally:
                 # Remove the module from sys.modules
                 del sys.modules[module_name]
-    return loaded_functions, function_declarations
 
 
-def load_and_configure_model(system_prompt, output_format, use_tools):
+def _load_and_configure_model(system_prompt, output_format, use_tools):
     """Loads, configures, and returns a Gemini model."""
-    tools = []
+    global loaded_functions
     if use_tools:
-        (
-            loaded_functions,
-            function_declarations,
-        ) = load_functions_from_directory()
-        # Crear herramientas a partir de las declaraciones de funciones
-        tools = [Tool(function_declarations=function_declarations)]
+        _load_functions_from_directory()
 
     generation_config = genai.GenerationConfig(max_output_tokens=MAX_OUTPUT_TOKENS)
-
     if output_format == "JSON":
         generation_config.response_mime_type = "application/json"
-    # Configurar el modelo con las herramientas y la configuración de herramientas
+    # Pass loaded_functions directly to the model
     model = genai.GenerativeModel(
         MODEL_NAME,
         system_instruction=system_prompt,
         generation_config=generation_config,
-        tools=tools,
+        tools=loaded_functions,
     )
-
     return model
 
 
-def format_prompt(prompt_name, previous_results_content, user_inputs_content):
+def _format_prompt(prompt_name, previous_results_content, user_inputs_content):
     """Formats the system and user prompts based on template and inputs."""
     system_prompt = ""
     attached_content = ""
@@ -284,14 +291,18 @@ def format_prompt(prompt_name, previous_results_content, user_inputs_content):
         with open(prompt_path, "r", encoding="utf-8") as file:
             system_prompt += file.read()
 
+    # Add system information to the system prompt
+    system_info = f"Operating System: {platform.system()}, OS Version: {platform.version()}, Architecture: {platform.machine()}."
+    system_prompt += f"\n\n{system_info}"
+
     # Check if data.txt exists and read it
     data_txt_path = Path(CACHE_DIR) / "data.txt"
     if data_txt_path.exists():
         with open(data_txt_path, "r", encoding="utf-8") as file:
             attached_content = file.read()
 
-    prompt_content = Content(
-        role="user", parts=[{"text": ""}])  # Default user prompt
+    # Initialize prompt_content with an empty list of parts
+    prompt_content = Content(role="user", parts=[])
 
     # Build the complete prompt with all sections
     # Convert user_inputs and previous_results to protos.Content
@@ -313,84 +324,285 @@ def format_prompt(prompt_name, previous_results_content, user_inputs_content):
     return system_prompt_content, prompt_content
 
 
-def handle_response(response, output_format, use_tools=False):
+def _handle_response(response, output_format, system_prompt_content, use_tools=False):
     """Handles the response from Gemini, including function calls."""
-    full_text_response, full_actions_response = handle_function_call(
-        response, output_format
-    )
+    full_text_response, full_actions_response = _handle_function_call(response, output_format)
+
+    if DEBUG:
+        console.print("\nResponse parts:", style="yellow")
+        for part in response.candidates[0].content.parts:
+            if hasattr(part, 'text'):
+                console.print(f"Text: {part.text}", style="yellow")
+            elif hasattr(part, 'function_call'):
+                console.print(f"Function call: {part.function_call.name}", style="yellow")
+                console.print(f"Arguments: {part.function_call.args}", style="yellow")
+            else:
+                console.print(f"Unknown part type: {type(part)}", style="yellow")
+
+    # Imprimir la respuesta de texto
+    if full_text_response:
+        console.print("\nRespuesta del modelo:", style="bold green")
+        console.print(Markdown(full_text_response))
+
+    # Save output history if enabled
     if SAVE_OUTPUT_HISTORY:
-        save_output_history(
+        _save_output_history(
             full_text_response,
             full_actions_response,
             response.candidates[0].content,
-            system_prompt
+            system_prompt_content,
         )
-    return response.candidates[0].content
+
+    return full_text_response
 
 
-def save_output_history(text_response, actions_response, prompt, system_prompt):
+def _load_chat_history():
+    """Load chat history from cached files."""
+    global chat_history
+    cache_path = Path("cache")
+    outputs_path = cache_path / "outputs_history"
+
+    # Load prompts and outputs from files
+    if outputs_path.exists():
+        for filename in outputs_path.glob("*.json"):
+            with open(filename, "r", encoding="utf-8") as f:
+                try:
+                    output_content = json.load(f)
+                    # Check if response exists and is not empty
+                    if 'response' in output_content and output_content['response']['text']:
+                        prompt_text = output_content['prompt']['text']
+                        response_text = output_content['response']['text']
+                        chat_history[prompt_text] = response_text
+                except Exception as e:
+                    console.print(f"Error loading chat history from '{filename}': {e}", style="bold red")
+
+
+def _save_output_history(text_response, actions_response, prompt_content, system_prompt_content):
+    """Saves the current output, prompt, and system prompt to a file in the cache."""
+    global chat_history
     cache_path = Path("cache")
     outputs_path = cache_path / "outputs_history"
     outputs_path.mkdir(exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_filename = outputs_path / f"{timestamp}.txt"
+    output_filename = outputs_path / f"{timestamp}.json"
+
+    # Extraer el texto de las partes del prompt_content
+    prompt_text = "".join([part.text if hasattr(part, 'text') else str(part) for part in prompt_content.parts])
+
+    # Extraer el texto de las partes del system_prompt_content
+    system_prompt_text = "".join([part.text if hasattr(part, 'text') else str(part) for part in system_prompt_content.parts])
+
+    # Create a dictionary to store the information
+    output_content = {
+        'response': {
+            'text': text_response,
+            'actions': actions_response,
+        },
+        'prompt': {
+            'text': prompt_text,
+            'system': system_prompt_text
+        }
+    }
+
+    # Save the dictionary as a JSON file
     with open(output_filename, "w", encoding="utf-8") as file:
-        file.write(
-            f"~~~~~~~~~~ Response text:\n{text_response}\n\n~~~~~~~~~~ Response actions:\n{actions_response}\n\n~~~~~~~~~~ Prompt\n{prompt}\n\n~~~~~~~~~~ System Prompt\n{system_prompt}\n"
-        )
+        json.dump(output_content, file, indent=4)
+
+    # Adds current conversation to chat_history
+    chat_history[prompt_text] = text_response
+
+
+def _handle_function_call(response, output_format):
+    """Processes function calls in the Gemini response and returns text and action responses."""
+    full_actions_response = ""
+    full_text_response = ""
+    # Extract function calls
+    function_calls = [
+        part.function_call
+        for part in response.candidates[0].content.parts
+        if hasattr(part, 'function_call')
+    ]
+
+    # Execute collected function calls
+    for func_call in function_calls:
+        func_name = func_call.name
+        args = MessageToDict(func_call.args) if func_call.args else {}  # Handle cases where args are not provided
+        # Check if the function exists in the global scope before calling it
+        if func_name in globals():
+            try:
+                function_to_call = globals()[func_name]
+                result = function_to_call(**args)
+                # Assuming 'result' is a string for now
+                full_actions_response += f"- function_name: {func_name} - function_response: {result}\n"
+                full_text_response += result
+            except Exception as e:
+                console.print(
+                    f"Error executing function {func_name}: {str(e)}", style="bold red"
+                )
+        else:
+            if func_name:
+                console.print(
+                    f"Function {func_name} is not defined", style="bold red"
+                )
+
+    if output_format == "JSON":
+        full_text_response = _preprocess_json_response(full_text_response)
+    return full_text_response, full_actions_response
 
 
 @handle_errors
-def call_gemini_api(
+def _call_gemini_api(
     system_prompt_content: Content,
     prompt_content: Content,
     output_format: str = None,
     use_tools: bool = False,
+    chat_id: str = None,  # New parameter for chat ID
 ):
     """Calls the Gemini API with the provided prompts and configuration."""
     try:
         with console.status(
-            "[bold yellow]Uploading data and waiting for Gemini..."
+            "[bold yellow]Waiting for Gemini..."
         ) as status:
             if DEBUG:
                 console.print("\n-- Model name:", MODEL_NAME, style="yellow")
 
-            model = load_and_configure_model(
-                system_prompt_content, output_format, use_tools
+            model = _load_and_configure_model(
+                system_prompt_content.parts[0].text, output_format, use_tools
             )
-
+            console.print("\n-- Loaded functions:", loaded_functions, style="yellow")
             cache_path = Path("cache")
 
             # Check if the cache directory exists, if not, create it
             cache_path.mkdir(exist_ok=True)
 
             if SAVE_PROMPT_HISTORY:
-                save_prompt_history(prompt_content, system_prompt_content)
+                _save_prompt_history(prompt_content, system_prompt_content)
 
-            total_content = Content()
-            total_content.parts.extend(system_prompt_content.parts)
-            total_content.parts.extend(prompt_content.parts)
-            token_count = model.count_tokens(total_content).total_tokens
+            # Initialize full_actions_response before the function call loop
+            full_actions_response = ""
 
-            if token_count > 1000000:
-                console.print(
-                    f"Error: The prompt is too big, it has more than 1 million tokens.",
-                    style="bold red",
-                )
-                console.print(f"The prompt has {token_count} tokens", style="red")
-                return None
-            elif token_count > 910000:
-                console.print(
-                    f"Warning: The prompt is using 91% of the token limit. {token_count} tokens",
-                    style="bold yellow",
-                )
+            # Load existing chat data if chat_id is provided
+            chat_data = load_chat(chat_id) if chat_id else None
+
+            # Execute collected function calls
+            if use_tools:
+                function_calls = []  # Array to store function calls
+
+                # Extract function calls from the prompt_content
+                for part in prompt_content.parts:
+                    if hasattr(part, 'function_call') and hasattr(part.function_call, 'name'):
+                        function_calls.append(part.function_call)
+
+                for func_call in function_calls:
+                    func_name = func_call.name
+                    args = getattr(func_call, 'args', {})
+                    # Check if the function exists in the global scope before calling it
+                    if func_name in globals():
+                        if DEBUG:
+                            console.print(
+                                f"Calling function {func_name} with args {args}", style="blue italic")
+                        function_to_call = globals()[func_name]
+                        result = function_to_call(**args)
+                        if DEBUG:
+                            console.print(
+                                f"Function returned: {result}\n", style="blue italic")
+                        # Update this line to handle the new return type (File object)
+                        full_actions_response += f"- function_name: {func_name} - function_response: {result.name if hasattr(result, 'name') else result}\n"
+                        # Add the uploaded file to the prompt using its URI
+                        if isinstance(result, genai.types.File):
+                            # Prepare FileData object
+                            file_data = {
+                                "mime_type": result.mime_type,
+                                "file_uri": result.uri
+                            }
+                            # Add the uploaded file to the prompt
+                            prompt_content.parts.append({"file": file_data})  # changed text to file
+                            if DEBUG:
+                                console.print(
+                                    f"Prompt: {prompt_content}", style="blue italic")
+            # Extraer el texto del prompt_content
+            prompt_text = "".join([part.text if hasattr(part, 'text') else str(part) for part in prompt_content.parts])
+
+            if DEBUG and prompt_text in chat_history:
+                console.print("Loading response from cache...", style="yellow")
+                full_text_response = chat_history[prompt_text]
+                status.stop()
+                # Create a new Content object with the cached response
+                return Content(role="assistant", parts=[{"text": full_text_response}])
             else:
-                console.print(f"The prompt has {token_count} tokens", style="green")
+                # Execute collected function calls
+                if use_tools:
+                    function_calls = []  # Array to store function calls
 
-            chat = model.start_chat(enable_automatic_function_calling=use_tools)
-            response = chat.send_message(prompt_content)
-            status.stop()
-            return handle_response(response, output_format, use_tools)
+                    # Extract function calls from the prompt_content
+                    for part in prompt_content.parts:
+                        if hasattr(part, 'function_call') and hasattr(part.function_call, 'name'):
+                            function_calls.append(part.function_call)
+
+                    for func_call in function_calls:
+                        func_name = func_call.name
+                        args = getattr(func_call, 'args', {})
+                        # Check if the function exists in the global scope before calling it
+                        if func_name in globals():
+                            try:
+                                if DEBUG:
+                                    console.print(
+                                        f"Calling function {func_name} with args {args}", style="blue italic")
+                                function_to_call = globals()[func_name]
+                                result = function_to_call(**args)
+                                if DEBUG:
+                                    console.print(
+                                        f"Function returned: {result}\n", style="blue italic")
+                                # Update this line to handle the new return type (File object)
+                                full_actions_response += f"- function_name: {func_name} - function_response: {result.name if hasattr(result, 'name') else result}\n"
+                                # Add the uploaded file to the prompt using its URI
+                                if isinstance(result, genai.types.File):
+                                    # Prepare FileData object
+                                    file_data = {
+                                        "mime_type": result.mime_type,
+                                        "file_uri": result.uri
+                                    }
+                                    # Add the uploaded file to the prompt
+                                    prompt_content.parts.append({"text": f"\n\nDescribe this image: {file_data}"})
+                                    if DEBUG:
+                                        console.print(
+                                            f"Prompt: {prompt_content}", style="blue italic")
+                            except Exception as e:
+                                console.print(
+                                    f"Error executing function {func_name}: {str(e)}", style="bold red")
+                        else:
+                            if func_name:
+                                console.print(
+                                    f"Function {func_name} is not defined", style="bold red")
+
+                # Only now, after processing function calls, send the prompt to Gemini
+                chat = model.start_chat(enable_automatic_function_calling=use_tools)
+                response = chat.send_message(prompt_content)
+
+                total_content = Content()
+                total_content.parts.extend(system_prompt_content.parts)
+                total_content.parts.extend(prompt_content.parts)
+                token_count = model.count_tokens(total_content).total_tokens
+
+                if token_count > MAX_TOKENS:
+                    console.print(
+                        f"Error: The prompt is too big, it has more than {MAX_TOKENS} tokens.",
+                        style="bold red",
+                    )
+                    console.print(f"The prompt has {token_count} tokens", style="red")
+                    return None
+                elif token_count > MAX_TOKENS * WARNING_THRESHOLD:
+                    console.print(
+                        f"Warning: The prompt is using {token_count/MAX_TOKENS*100:.0f}% of the token limit. {token_count} tokens",
+                        style="bold yellow",
+                    )
+                else:
+                    console.print(f"The prompt has {token_count} tokens", style="green")
+
+                status.stop()
+
+                # Handle response chunks and return the full content
+                return _handle_response(response, output_format, system_prompt_content, use_tools)
     except google.api_core.exceptions.DeadlineExceeded:
         console.print(
             "Error: The request timed out. Please try again later.", style="bold red"
@@ -400,182 +612,81 @@ def call_gemini_api(
         console.print(f"API Error: {e.message}", style="bold red")
         raise
 
-
-def save_prompt_history(prompt: Content, system_prompt: Content):
-    """Saves the current prompt to a file in the cache."""
+def _save_prompt_history(prompt_content, system_prompt_content):
+    """Saves the current prompt and system prompt to a file in the cache."""
     cache_path = Path("cache")
-    prompt_history_path = cache_path / "prompts_history"
-    prompt_history_path.mkdir(exist_ok=True)
+    prompts_path = cache_path / "prompts_history"
+    prompts_path.mkdir(exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    prompt_filename = prompt_history_path / f"{timestamp}.txt"
+    prompt_filename = prompts_path / f"{timestamp}.json"
+
+    # Ensure prompt_content and system_prompt_content are iterable
+    prompt_text = "".join([part.text for part in prompt_content.parts])
+    system_prompt_text = "".join([part.text for part in system_prompt_content.parts])
+
+    # Create a dictionary to store the information
+    prompt_content_dict = {
+        'prompt': {
+            'text': prompt_text,
+            'system': system_prompt_text
+        }
+    }
+
+    # Save the dictionary as a JSON file
     with open(prompt_filename, "w", encoding="utf-8") as file:
-        file.write(
-            "~~~~~~~~~~ Prompt\n"
-            + prompt.parts[0].text
-            + "\n\n~~~~~~~~~~ System Prompt\n"
-            + system_prompt.parts[0].text
-        )
+        json.dump(prompt_content_dict, file, indent=4)
 
 
-def clone_repo(url, directory="workstation"):
-    """Clone a git repository from a given URL into a specified directory."""
-    if not os.path.exists(directory) or not os.listdir(directory):
-        os.makedirs(directory, exist_ok=True)
-        Repo.clone_from(url, directory)
-        console.print(f"\nRepository cloned into {directory}", style="green")
-    else:
-        console.print(
-            f"\nDirectory {directory} already has files. Skipping cloning.",
-            style="yellow",
-        )
+def _handle_response_chunks(model_response):
+    """Handles streaming responses from the Gemini model."""
+    full_response_text = ""
+    live_text = Text()
 
-
-def download_file(url, filename):
-    """Download a file from a URL and save it locally."""
-    response = requests.get(url)
-    with open(filename, "wb") as f:
-        f.write(response.content)
-    console.print(f"File downloaded as {filename}", style="green")
-
-
-def process_directory(directory, config, section_name):
-    """Process files in a directory, excluding specified extensions, directories, and filenames."""
-    exclude_extensions = config.get("exclude_extensions", [])
-    exclude_directories = config.get("exclude_directories", [])
-    exclude_filenames = config.get("exclude_filenames", [])
-    cache_path = Path(CACHE_DIR)
-    # Asegurarse de que la carpeta cache existe
-    cache_path.mkdir(exist_ok=True)
-
-    for root, dirs, files in os.walk(directory):
-        dirs[:] = [d for d in dirs if d not in exclude_directories]
-        files[:] = [
-            f
-            for f in files
-            if f not in exclude_filenames
-            and not any(f.endswith(ext) for ext in exclude_extensions)
-        ]
-        for file_name in files:
-            with open(
-                os.path.join(root, file_name), "r", encoding="utf-8", errors="ignore"
-            ) as content_file:
-                content = content_file.read()
-                update_data_txt(Path(directory) / file_name, content)
-    console.print(f"Directory processed: {directory}", style="green")
-
-
-def process_path_workstation_input(path):
-    """Process the input path or URL."""
-    if isinstance(path, list):
-        console.print(
-            "Error: Expected a string for 'path', but got a list.", style="bold red"
-        )
-        return
-    # Verificar si la ruta es una URL de archivo local y convertirla a una ruta de sistema de archivos
-    if path.startswith("file://"):
-        path = path[7:]  # Eliminar el prefijo 'file://'
-
-    if path.startswith(("http://", "https://")):
-        with console.status("[bold yellow]Cloning repository...") as status:
-            clone_repo(path, directory=Path(WORKSTATION_ORIGINAL_DIR))
-            status.update("Repository cloned successfully!")
-    else:
-        if not os.path.exists(path):
-            console.print("The path does not exist.", style="red")
-            # Solicitar al usuario que reintente ingresar la ruta
-            console.print(
-                "Please re-enter the directory path or repository URL:",
-                style="yellow",
+    # Use Live to display the text as it arrives
+    with Live(
+        live_text, console=console, auto_refresh=True, transient=True
+    ) as live:
+        for chunk in model_response:
+            text = getattr(
+                chunk, "text", str(chunk) if isinstance(chunk, str) else None
             )
-            new_path = session.prompt()
-            if new_path:
-                process_path_workstation_input(new_path)
-            return
-        if os.path.isdir(path):
-            with console.status("[bold yellow]Processing directory...") as status:
-                # Asegurarse de que la carpeta 'original' existe
-                original_path = Path(WORKSTATION_ORIGINAL_DIR)
-                original_path.mkdir(parents=True, exist_ok=True)
+            if text is None:
+                console.print(
+                    f"Received non-text data: {chunk}", style="bold red"
+                )
+                continue
 
-                # Copiar el contenido a la carpeta 'original'
-                for item in os.listdir(path):
-                    s = os.path.join(path, item)
-                    d = os.path.join(original_path, item)
-                    if os.path.isdir(s):
-                        shutil.copytree(s, d, dirs_exist_ok=True)
-                    else:
-                        shutil.copy2(s, d)
+            # Accumulate text in the full text response
+            full_response_text += text
+            # Update the text in the Live display
+            live_text.append(text)
+            live.update(live_text)
+        live.update(Text(""))
+        live.stop()
 
-                status.update("Directory processed successfully!")
-        elif os.path.isfile(path):
-            original_path = Path(WORKSTATION_ORIGINAL_DIR)
-            original_path.mkdir(parents=True, exist_ok=True)
-            copy(path, original_path)
-            console.print(
-                f"File {path} copied to {original_path}.", style="green"
-            )
+    return full_response_text
 
 
-def load_config():
-    """Load configuration from a JSON file."""
-    with open(os.path.join(SYSTEM_DIR, "rules.json"), "r") as config_file:
-        return json.load(config_file)
-
-
-def execute_action(action, previous_results_content, user_inputs_content):
-    """Executes the specified action, either calling the Gemini API or a function."""
-    output_format = action.get("output_format", "text")
-    use_tools = action.get("tools", False)
-
-    if "prompt" in action:
-        (
-            system_prompt_content,
-            prompt_content,
-        ) = format_prompt(action["prompt"], previous_results_content, user_inputs_content)
-        return call_gemini_api(
-            system_prompt_content, prompt_content, output_format, use_tools
-        )
-    elif "function" in action:
-        function_name = action["function"]
-        if function_name in globals():
-            function_to_call = globals()[function_name]
-            return function_to_call(previous_results_content, user_inputs_content)
+def _preprocess_json_response(data):
+    """Preprocesses JSON responses for parsing or conversion."""
+    try:
+        if isinstance(data, str):
+            # Attempt to load the string as JSON
+            response_json = json.loads(data)
+            return response_json  # Return the deserialized JSON object
+        elif isinstance(data, (dict, list)):
+            return data  # Return the JSON string
         else:
-            console.print(
-                f"Function {function_name} is not defined", style="bold red"
-            )
-            return None
-    return None
+            raise TypeError("Unsupported data type for JSON conversion")
+    except json.JSONDecodeError as e:
+        console.print(f"Error decoding JSON: {e}", style="bold red")
+        return None
+    except TypeError as e:
+        console.print(f"Error: {e}", style="bold red")
+        return None
 
 
-def handle_action(action, previous_results_content, user_inputs_content):
-    """Handles user interactions and action execution."""
-    if "prompt" in action:
-        console.print(
-            Markdown(f"\n\n# Processing prompt: {action['prompt']}"),
-            style="bold bright_blue",
-        )
-    elif "function" in action:
-        console.print(
-            Markdown(f"\n\n# Executing action: {action['function']}"),
-            style="bold bright_blue",
-        )
-    else:
-        console.print("Error: No action defined for this option.", style="bold red")
-        exit_program()
-
-    # Capture user feedback with a 2-second timeout only for 'prompt' actions
-    if "prompt" in action and "pre_feedback" in action:
-        user_inputs_content = handle_feedback(user_inputs_content)
-    # Execute action
-    result_content = execute_action(
-        action, previous_results_content, user_inputs_content
-    )
-
-    return result_content
-
-
-def handle_feedback(user_inputs_content, directly=False):
+def _handle_user_feedback(user_inputs_content, directly=False):
     """Collects and appends user feedback to the content."""
     feedback = directly or option_timer(
         "[red]Press ESC to continues[/red] - [green]Press Enter to add feedback[/green]",
@@ -592,69 +703,48 @@ def handle_feedback(user_inputs_content, directly=False):
     return user_inputs_content
 
 
-def prepare_editing_environment():
-    """Prepares the editing environment by copying files from 'original' to 'edited'."""
-    original_dir = Path(WORKSTATION_DIR) / "original"
-    edited_dir = Path(WORKSTATION_DIR) / "edited"
-    edited_dir.mkdir(parents=True, exist_ok=True)
+def _execute_action(action, previous_results_content, user_inputs_content):
+    """Executes the specified action, either calling the Gemini API or a function."""
+    output_format = action.get("output_format", "text")
+    use_tools = action.get("tools", False)
 
-    with console.status("[bold green]Preparing editing environment...") as status:
-        # Copiar archivos de 'original' a 'edited' solo si no existen o están desactualizados
-        for item in os.listdir(original_dir):
-            source_path = original_dir / item
-            target_path = edited_dir / item
-            # Verificar si el archivo o directorio necesita ser actualizado
-            if not target_path.exists() or file_needs_update(
-                source_path, target_path
-            ):
-                if source_path.is_dir():
-                    if target_path.exists():
-                        shutil.rmtree(target_path)
-                    shutil.copytree(source_path, target_path, dirs_exist_ok=True)
-                else:
-                    shutil.copy2(source_path, target_path)
-                status.update(f"Copied {item} to editing environment.")
-        status.update("Editing environment ready!")
-
-
-def file_needs_update(source, target):
-    """Determines if a file needs to be updated based on modification date and size."""
-    if not target.exists():
-        return True
-    source_stat = source.stat()
-    target_stat = target.stat()
-    # Comprobar si la fecha de modificación o el tamaño del archivo son diferentes
-    if (
-        source_stat.st_mtime > target_stat.st_mtime
-        or source_stat.st_size != target_stat.st_size
-    ):
-        return True
-    return False
-
-
-def handle_option(option):
-    """Handles user interaction, action execution, and feedback collection for a menu option."""
-    user_inputs_content = Content(role="user")
-    if "inputs" in option:
-        for input_detail in option["inputs"]:
-            console.print(f"{input_detail['description']}", style="yellow")
-            user_input = session.prompt()
-            user_inputs_content.parts.append(
-                {"text": f"[{input_detail['name']}]{user_input}[/{input_detail['name']}]"}
+    if "prompt" in action:
+        console.print(
+            Markdown(f"\n\n# Processing prompt: {action['prompt']}"),
+            style="bold bright_blue",
+        )
+        (
+            system_prompt_content,
+            prompt_content,
+        ) = _format_prompt(action["prompt"], previous_results_content, user_inputs_content)
+        return _call_gemini_api(
+            system_prompt_content, prompt_content, output_format, use_tools
+        )
+    elif "function" in action:
+        console.print(
+            Markdown(f"\n\n# Executing action: {action['function']}"),
+            style="bold bright_blue",
+        )
+        function_name = action["function"]
+        if function_name in globals():
+            function_to_call = globals()[function_name]
+            return function_to_call(previous_results_content, user_inputs_content)
+        else:
+            console.print(
+                f"Function {function_name} is not defined", style="bold red"
             )
+            return None
+    return None
 
-    results_content = Content(role="assistant")
 
-    # Verificar si alguna acción requiere ejecución de edición
-    if "use_tools" in option:
-        prepare_editing_environment()
-
+def _handle_actions(option, previous_results_content, user_inputs_content):
+    """Handles user interactions and action execution."""
     # Handle actions
     if "actions" in option:
         while True:
             for action in option["actions"]:
-                result_content = handle_action(
-                    action, results_content, user_inputs_content
+                result_content = _handle_action(
+                    action, previous_results_content, user_inputs_content
                 )
                 if result_content is not None:
                     results_content = result_content
@@ -664,11 +754,12 @@ def handle_option(option):
                 responseOnEnter="feedback",
             )
             if not_continue == "feedback":
-                user_inputs_content = handle_feedback(
+                user_inputs_content = _handle_user_feedback(
                     user_inputs_content, directly=True
                 )
             if not not_continue:
                 break
+        return results_content
     else:
         console.print(
             "This option does not have any actions defined yet. Please try another option.",
@@ -676,9 +767,23 @@ def handle_option(option):
         )
         # Prompt for new input instead of starting the timer
         display_menu()
+        return None
 
 
-def display_other_functions(options):
+def _handle_action(action, previous_results_content, user_inputs_content):
+    """Handles user interactions and action execution."""
+    # Capture user feedback with a 2-second timeout only for 'prompt' actions
+    if "prompt" in action and "pre_feedback" in action:
+        user_inputs_content = _handle_user_feedback(user_inputs_content)
+    # Execute action
+    result_content = _execute_action(
+        action, previous_results_content, user_inputs_content
+    )
+
+    return result_content
+
+
+def _display_other_functions(options):
     """Displays other available functions from the menu options."""
     console.print(Markdown(f"\n\n# Other Functions"), style="bold magenta")
     for index, option in enumerate(options, start=1):
@@ -694,15 +799,15 @@ def display_other_functions(options):
         display_menu()
         return
     elif int(choice) == len(options) + 2:
-        exit_program()  # Sale del programa
+        _exit_program()  # Sale del programa
     else:
         selected_option = options[int(choice) - 1]
-        handle_option(selected_option)
+        _handle_option(selected_option)
         # Repite el menú después de ejecutar una acción
-        display_other_functions(options)
+        _display_other_functions(options)
 
 
-def load_menu_options():
+def _load_menu_options():
     """Loads menu options from the JSON configuration file."""
     with open(f"{SYSTEM_DIR}/menu_options.json", "r") as file:
         try:
@@ -711,13 +816,72 @@ def load_menu_options():
             console.print(
                 f"Error loading menu options:\n{e}", style="bold red"
             )
-            exit_program()
+            _exit_program()
 
+#-------------------------------------------#
+#    New functions for chat management     #
+#-------------------------------------------#
+
+def save_chat(chat_data):
+    """Guarda la información del chat en un archivo JSON."""
+    chats_dir = Path(CACHE_DIR) / "chats"
+    chats_dir.mkdir(exist_ok=True)
+    chat_filepath = chats_dir / f"{chat_data['chat_id']}.json"
+    with open(chat_filepath, "w", encoding="utf-8") as f:
+        json.dump(chat_data, f, indent=4)
+
+
+def load_chat(chat_id):
+    """Carga la información del chat con el ID especificado."""
+    chat_filepath = Path(CACHE_DIR) / "chats" / f"{chat_id}.json"
+    if chat_filepath.exists():
+        with open(chat_filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        return None
+
+
+def list_chats():
+    """Devuelve una lista de los IDs de los 20 chats más recientes."""
+    chats_dir = Path(CACHE_DIR) / "chats"
+    chat_files = list(chats_dir.glob("*.json")) if chats_dir.exists() else []
+    chat_files.sort(key=os.path.getmtime, reverse=True)
+    return [Path(chat_file).stem for chat_file in chat_files[:20]]
+
+
+#-------------------------------------------#
+# New functions for cached file management  #
+#-------------------------------------------#
+
+def save_file_cache(file_data):
+    """Guarda la información del archivo en caché en el archivo JSON."""
+    files_dir = Path(CACHE_DIR) / "files"
+    files_dir.mkdir(exist_ok=True)
+    file_filepath = files_dir / f"{file_data['file_id']}.json"
+    with open(file_filepath, "w", encoding="utf-8") as f:
+        json.dump(file_data, f, indent=4)
+
+
+def load_file_cache(file_id):
+    """Carga la información del archivo en caché con el ID especificado."""
+    file_filepath = Path(CACHE_DIR) / "files" / f"{file_id}.json"
+    if file_filepath.exists():
+        with open(file_filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        return None
+
+def list_cached_files():
+    """Devuelve una lista de los IDs de los 20 archivos en caché más recientes."""
+    files_dir = Path(CACHE_DIR) / "files"
+    file_files = list(files_dir.glob("*.json")) if files_dir.exists() else []
+    file_files.sort(key=os.path.getmtime, reverse=True)
+    return [Path(file_file).stem for file_file in file_files[:20]]
 
 def display_menu():
-    """Displays the main menu of the Gemini Workstation."""
-    console.print(Markdown(f"\n\n# GEMINI WORKSTATION"), style="bold magenta")
-    options = load_menu_options()
+    """Displays the main menu of the GeminiSH."""
+    console.print(Markdown(f"\n\n# GEMINI SH"), style="bold magenta")
+    options = _load_menu_options()
     main_menu_options = [
         opt
         for opt in options
@@ -752,199 +916,179 @@ def display_menu():
         choices=[str(i) for i in range(1, len(main_menu_options) + 3)],
     )
     if int(choice) == len(main_menu_options) + 1:
-        display_other_functions(other_functions)
+        _display_other_functions(other_functions)
     elif int(choice) == len(main_menu_options) + 2:
-        exit_program()
+        _exit_program()
     else:
         selected_option = main_menu_options[int(choice) - 1]
-        handle_option(selected_option)
+        _handle_option(selected_option)
 
 
-def save_output(content, user_inputs, prompt):
-    """Save the output content to a specified file, now includes user inputs, function name, and prompt name."""
-    filename = None
-    # Verificar si 'filename' está en user_inputs y usarlo si está presente
-    if "filename" in user_inputs:
-        filename = f"{user_inputs['filename']}.txt"
-    elif not filename:
-        # Nombre de archivo por defecto si no se proporciona
-        # Usar el nombre del prompt como nombre de archivo por defecto
-        filename = f"output_{prompt}.txt"
-
-    # Asegurarse de que el archivo se guarde en la carpeta 'data'
-    filename = Path("data") / filename
-
-    with open(filename, "w", encoding="utf-8") as file:
-        file.write(content)
-    console.print(f"Output saved to {filename}", style="bold green")
-
-    # Actualizar data.txt con el nuevo contenido
-    update_data_txt(filename, content)
-
-
-def delete_workspace(previous_results, user_inputs):
-    """Delete the workspace after confirmation."""
-    console.print(
-        "This will delete all contents in the workspace including the insights data and cache.",
-        style="bold red",
-    )
-    confirmation = session.prompt("Type 'delete' to confirm workspace deletion:\n")
-    if confirmation.lower() == "delete":
-        with console.status("[bold green]Deleting workspace contents...") as status:
-            # Eliminar contenido de las carpetas 'workstation', 'data' y 'cache'
-            for subdir in [WORKSTATION_DIR, DATA_DIR, CACHE_DIR]:
-                if os.path.exists(subdir):
-                    for root, dirs, files in os.walk(subdir, topdown=False):
-                        for name in files:
-                            os.remove(os.path.join(root, name))
-                            status.update(f"Deleting file: {name}")
-                        for name in dirs:
-                            os.rmdir(os.path.join(root, name))
-                            status.update(f"Removing directory: {name}")
-            console.print("Workspace contents deleted.", style="bold green")
-    else:
-        console.print("Workspace deletion cancelled.", style="bold yellow")
-    exit_program()
-
-
-def update_data_txt(filename, content):
-    """Updates the data.txt file with processed information from files."""
-    data_txt_path = Path(CACHE_DIR) / "data.txt"
-    filename = Path(filename).resolve()
-    workstation_dir_path = Path(WORKSTATION_DIR).resolve()
-
-    try:
-        relative_path = filename.relative_to(workstation_dir_path)
-        marker = f"```{relative_path}\n"
-    except ValueError:
-        relative_path = filename.relative_to(Path.cwd())
-        marker = f"```{relative_path}\n"
-
-    # Dividir el contenido en líneas y agregar el número de línea
-    lines = content.splitlines()
-    numbered_lines = [
-        f"[LINE {i + 1}] {line}\n" for i, line in enumerate(lines)
-    ]
-    new_entry = f"{marker}{''.join(numbered_lines)}```\n"
-
-    if data_txt_path.exists():
-        with open(data_txt_path, "r+", encoding="utf-8") as file:
-            existing_content = file.read()
-            start_idx = existing_content.find(marker)
-            if start_idx != -1:
-                end_idx = existing_content.find(
-                    "\n```", start_idx + len(marker))
-                if end_idx == -1:
-                    end_idx = len(existing_content)
-                updated_content = existing_content[:start_idx] + \
-                    new_entry + existing_content[end_idx:]
-            else:
-                updated_content = existing_content + new_entry
-            file.seek(0)
-            file.write(updated_content)
-            file.truncate()
-    else:
-        with open(data_txt_path, 'w', encoding='utf-8') as file:
-            file.write(new_entry)
-
-
-def handle_response_chunks(model_response):
-    """Handles streaming responses from the Gemini model."""
-    full_response_text = ""
-    live_text = Text()
-
-    # Use Live to display the text as it arrives
-    with Live(
-        live_text, console=console, auto_refresh=True, transient=True
-    ) as live:
-        for chunk in model_response:
-            text = getattr(
-                chunk, "text", str(chunk) if isinstance(chunk, str) else None
+def _handle_option(option):
+    """Handles user interaction, action execution, and feedback collection for a menu option."""
+    user_inputs_content = Content(role="user", parts=[])
+    if "inputs" in option:
+        for input_detail in option["inputs"]:
+            console.print(f"{input_detail['description']}", style="yellow")
+            user_input = session.prompt()
+            user_inputs_content.parts.append(
+                {"text": f"[{input_detail['name']}]{user_input}[/{input_detail['name']}]"}
             )
-            if text is None:
-                console.print(
-                    f"Received non-text data: {chunk}", style="bold red"
-                )
-                continue
 
-            # Accumulate text in the full text response
-            full_response_text += text
-            # Update the text in the Live display
-            live_text.append(text)
-            live.update(live_text)
-        live.update(Text(""))
-        live.stop()
+    results_content = Content(role="assistant", parts=[])
 
-    return full_response_text
-
-
-def preprocess_json_response(data):
-    """Preprocesses JSON responses for parsing or conversion."""
-    try:
-        if isinstance(data, str):
-            # Attempt to load the string as JSON
-            response_json = json.loads(data)
-            return response_json  # Return the deserialized JSON object
-        elif isinstance(data, (dict, list)):
-            return data  # Return the JSON string
-        else:
-            raise TypeError("Unsupported data type for JSON conversion")
-    except json.JSONDecodeError as e:
-        console.print(f"Error decoding JSON: {e}", style="bold red")
-        return None
-    except TypeError as e:
-        console.print(f"Error: {e}", style="bold red")
-        return None
-
-
-def set_workspace(previous_results, user_inputs):
-    """Sets up the workspace by cloning a repository or copying a directory."""
-    console.print(
-        "Please enter the directory path or repository URL:", style="yellow"
+    # Handle actions
+    results_content = _handle_actions(
+        option, results_content, user_inputs_content
     )
-    path = session.prompt()
-    process_path_workstation_input(path)
 
+    if results_content is not None:
+        # Display the response, handling Markdown and JSON formatting
+        if option.get("output_format", "text") == "JSON":
+            console.print(json.dumps(results_content, indent=4))
+        else:
+            # Extract text from the parts of the Content object
+            text_to_display = ""
+            if isinstance(results_content, Content):
+                text_to_display = "".join([getattr(part, 'text', str(part)) for part in results_content.parts])
+            elif isinstance(results_content, str):
+                text_to_display = results_content
+            else:
+                text_to_display = str(results_content)
+            console.print(Markdown(text_to_display))
 
-def show_help(previous_results, user_inputs):
-    """Displays instructions on using the tool."""
-    # Fetch the content of INFO.md from the root of the project and display it using Markdown
-    with open("INFO.md", "r", encoding="utf-8") as file:
-        info_content = file.read()
-    console.print(Markdown(info_content, justify="left"), style="italic light_coral")
+        # Ask for feedback and display response
+        not_continue = option_timer(
+            "[red]Press ESC to continues[/red] - [green]Press Enter to add feedback[/green]",
+            responseOnTimeout=False,
+        )
+        if not_continue:
+            user_inputs_content = _handle_user_feedback(
+                user_inputs_content, directly=True
+            )
+        # Repite el menú después de ejecutar una acción
+        display_menu()
 
+#------------------------------------------------#
+#          Main and function calls               #
+#------------------------------------------------#
 
-def recreate_data_file(previous_results, user_inputs):
-    """Recreates the data.txt file from the workstation and data directories."""
-    config = load_config()
-    # Clear the data.txt file before writing
-    open(Path(CACHE_DIR) / "data.txt", "w").close()
-    process_directory(WORKSTATION_DIR, config["workspace_dir"], "Workstation")
-    process_directory(DATA_DIR, config["workspace_dir"], "Extra information")
-    console.print("Data has been recreated.", style="bold green")
+def continue_chat(previous_results_content, user_inputs_content):
+    """Handles continuation of previous conversations."""
+    available_chats = list_chats()
+    if not available_chats:
+        console.print("No se encontraron conversaciones previas.", style="yellow")
+        # Volver al menú principal
+        display_menu()
+        return
 
+    # User selects from recent chat IDs
+    console.print(Markdown(f"\n\n# Recent Conversations"), style="bold magenta")
+    for index, chat_id in enumerate(available_chats, start=1):
+        console.print(f"{index}. {chat_id}", style="bold blue")
 
-def exit_program():
-    """Exits the program gracefully."""
-    console.print("\n\nExiting program...", style="bold red")
-    exit(0)
+    choice = ConsolePrompt.ask(
+        "Enter the number of the conversation to continue (or press Enter to return to the main menu)",
+        choices=[str(i) for i in range(1, len(available_chats) + 1)] + [""],
+        default="",
+    )
+    if not choice:
+        display_menu()
+        return
 
+    selected_index = int(choice) - 1
+    chat_id = available_chats[selected_index]
 
-def handle_sigint(signum, frame):
-    """Handles the SIGINT signal (Ctrl+C)."""
-    exit_program()
+    chat_data = load_chat(chat_id)
+    if not chat_data:
+        console.print(f"Error: Could not load chat {chat_id}", style="red")
+        return
 
+    console.print(f"Continuing conversation {chat_id}...", style="green")
+    # Add logic to continue the chat here, using chat_data
+    
+    # You might want to use previous_results_content and user_inputs_content here
+    # For example:
+    # user_inputs_content.parts.append({"text": f"Continuing chat {chat_id}"})
+    # results_content = _handle_actions(chat_data, previous_results_content, user_inputs_content)
+    
+    # Return to main menu after continuing the chat
+    display_menu()
+
+def list_cached_documents():
+    """Lists cached documents for user selection."""
+    available_files = list_cached_files()
+    if not available_files:
+        console.print("No cached documents found.", style="yellow")
+        return
+
+    console.print(Markdown(f"\n\n# Available Cached Documents"), style="bold magenta")
+    for index, file_id in enumerate(available_files, start=1):
+        console.print(f"{index}. {file_id}", style="bold blue")
+
+    console.print(f"{len(available_files) + 1}. Return to Main Menu", style="bold blue")
+
+    choice = ConsolePrompt.ask(
+        "Enter the number of the document to view (or press Enter to return to the main menu)",
+        choices=[str(i) for i in range(1, len(available_files) + 2)],
+        default=str(len(available_files) + 1),
+    )
+    if int(choice) == len(available_files) + 1:
+        display_menu()
+        return
+
+    selected_index = int(choice) - 1
+    file_id = available_files[selected_index]
+
+    console.print(f"Viewing document {file_id}...", style="green")
+    # Add logic to display the file content here
+
+def use_cached_document():
+    """Handles the use of cached documents in the prompt."""
+    available_files = list_cached_files()
+    if not available_files:
+        console.print("No cached documents found.", style="yellow")
+        return
+    
+    console.print(Markdown(f"\n\n# Available Cached Documents"), style="bold magenta")
+    for index, file_id in enumerate(available_files, start=1):
+        console.print(f"{index}. {file_id}", style="bold blue")
+
+    console.print(f"{len(available_files) + 1}. Return to Main Menu", style="bold blue")
+
+    choice = ConsolePrompt.ask(
+        "Enter the number of the document to use (or press Enter to return to the main menu)",
+        choices=[str(i) for i in range(1, len(available_files) + 2)],
+        default=str(len(available_files) + 1),
+    )
+    if int(choice) == len(available_files) + 1:
+        display_menu()
+        return
+
+    selected_index = int(choice) - 1
+    file_id = available_files[selected_index]
+
+    file_data = load_file_cache(file_id)
+    if not file_data:
+        console.print(f"Error: Could not load document {file_id}", style="red")
+        return
+
+    console.print(f"Using document {file_id} in the prompt...", style="green")
+    # Add logic to use file_data in the prompt here,
+    # such as adding the file to the content.parts list.
 
 def main():
     """Main function to handle command line arguments and direct program flow."""
     try:
+        if DEBUG:
+            console.print("Loading chat history...", style="yellow")
+            _load_chat_history()  # Loads chat history from cache on startup
         display_menu()  # Display the menu if no input is provided
     except KeyboardInterrupt:
-        exit_program()  # Call exit_program when a keyboard interrupt is detected
-
-
+        _exit_program()  # Call _exit_program when a keyboard interrupt is detected
+        
 if __name__ == "__main__":
     # Set up the signal handler for SIGINT
-    signal.signal(signal.SIGINT, handle_sigint)
-    check_api_key()
+    signal.signal(signal.SIGINT, _handle_sigint)
+    _check_api_key()
     main()

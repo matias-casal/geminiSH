@@ -2,7 +2,6 @@
 import os
 import mimetypes
 import google.generativeai as genai
-from google.generativeai.types import content_types
 from rich.console import Console
 
 console = Console()
@@ -21,6 +20,13 @@ SUPPORTED_MIME_TYPES = [
 def upload_to_cache(document_path: str, display_name: str = "") -> str:
     """
     Uploads a document to the cache, checking if the file type is supported by Google Gemini.
+
+    Parameters:
+    document_path (str): The path to the document you want to cache.
+    display_name (str): A display name for the document (optional).
+
+    Returns:
+    str: A formatted string containing the document path and either the cached content name or an error message.
     """
     # Check if the file exists
     if not os.path.exists(document_path):
@@ -48,12 +54,3 @@ def upload_to_cache(document_path: str, display_name: str = "") -> str:
     except Exception as e:
         return f"[file_path]{document_path}[/file_path][result_error]Error caching the document: {e}[/result_error]"
 
-# Function declaration for upload_to_cache
-functions_declaration = [{
-    "name": "upload_to_cache",
-    "description": "Uploads a document to the cache, only cache things if the user told you to do it.",
-    "parameters": {
-        "document_path": {"type": 'string', "description": "The path to the document you want to cache"},
-        "display_name": {"type": 'string', "description": "A display name for the document (optional)"}
-    }
-}]
