@@ -1,5 +1,14 @@
 {
-  "ignore_dirs": ["__pycache__", ".venv", ".idea"],
-  "ignore_files": [".gitignore", ".env"],
-  "ignore_prefixes": ["."]
+  "ignore_dirs": [
+    "__pycache__",
+    ".venv",
+    ".idea"
+  ],
+  "ignore_files": [
+    ".gitignore",
+    ".env"
+  ],
+  "ignore_prefixes": [
+    "."
+  ]
 }
