@@ -1,5 +1,6 @@
 # system/functions/cache_management.py
 import os
+import datetime
 import mimetypes
 import google.generativeai as genai
 from rich.console import Console
@@ -17,13 +18,21 @@ SUPPORTED_MIME_TYPES = [
     "image/png",
 ]
 
-def upload_to_cache(document_path: str, display_name: str = "") -> str:
+def upload_to_cache(document_path: str, ttl: int, display_name: str = "", description: str = "") -> str:
     """
-    Uploads a document to the cache, checking if the file type is supported by Google Gemini.
+    ## File Caching
+    - You can cache files using the `upload_to_cache` function. This function takes three arguments:
+        - `document_path`: The path to the document you want to cache.
+        - `ttl`: Time to live for the cached file in seconds.
+        - `display_name`: A display name for the document (optional).
+        - `description`: A short description of the document (optional).
+    - You should use this function whenever the user requests to work with a local file.
 
     Parameters:
     document_path (str): The path to the document you want to cache.
+    ttl (int): Time to live for the cached file in seconds
     display_name (str): A display name for the document (optional).
+    description (str): A short description of the document (optional).
 
     Returns:
     str: A formatted string containing the document path and either the cached content name or an error message.
@@ -44,6 +53,8 @@ def upload_to_cache(document_path: str, display_name: str = "") -> str:
         cached_content = genai.caching.CachedContent.create(
             model=os.getenv('MODEL_NAME', 'gemini-pro'),  # Use the environment variable for the model name
             display_name=display_name if display_name else None,
+            ttl=datetime.timedelta(seconds=ttl),
+            description=description if description else None,
             contents=[genai.upload_file(document_path)],
         )
         console.print(
@@ -53,4 +64,3 @@ def upload_to_cache(document_path: str, display_name: str = "") -> str:
         return f"[file_path]{document_path}[/file_path][cached_as]{cached_content.name}[/cached_as]"
     except Exception as e:
         return f"[file_path]{document_path}[/file_path][result_error]Error caching the document: {e}[/result_error]"
-
