@@ -2,7 +2,7 @@
   "ignore_dirs": [
     "__pycache__",
     ".venv",
-    ".idea"
+    "newtry"
   ],
   "ignore_files": [
     ".gitignore",
