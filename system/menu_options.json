@@ -22,8 +22,7 @@
     "main_menu": true,
     "inputs": [
       {
-        "name": "request",
-        "description": "What do you want to do?"
+        "name": "request"
       }
     ],
     "actions": [
