@@ -14,8 +14,6 @@
 
 ## Files Handling
 
-## Files Handling
-
 The system allows users to request tasks based on documents. When a user needs to perform an operation involving a document, they should first upload the file using the `upload_file` function. This function checks the MIME type of the file to ensure it is supported and then uploads it to Gemini. If the file type is supported, it will be added to the list of uploaded files and a success message will be returned.
 
 Once the file is uploaded, users can generate content from the uploaded files using the `generate_content_from_files` function. This function takes a prompt as input and uses the uploaded files along with the prompt to generate content. If no files have been uploaded, the function will return a message indicating that no files are available.
