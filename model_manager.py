@@ -25,7 +25,7 @@ class ModelManager:
                 with open(first_runs_path, "r") as f:
                     first_runs_text = f.read()
                     self.chat_manager.add_text_part('model', first_runs_text)
-                    self.output_manager.print(first_runs_text, style="bold magenta", markdown=True)
+                    self.output_manager.print(first_runs_text, style="blue", markdown=True)
     
     def get_api_key(self):
         """Checks if the GOOGLE_API_KEY is set, if not, prompts the user to enter it."""

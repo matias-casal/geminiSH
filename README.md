@@ -1,6 +1,15 @@
-## Gemini SH: An Intelligent Terminal Assistant Powered by Google Gemini
+## Gemini SH: Your Personalized AI Agent for Enhanced Productivity
 
-**Gemini SH** is a Python library designed to transform your terminal into an intelligent assistant powered by the advanced capabilities of Google Gemini. This project aims to bridge the gap between natural language and terminal commands, allowing users to interact with their computers intuitively and efficiently without needing to be terminal experts.
+**Gemini SH** is a powerful Python library that leverages the capabilities of Google Gemini to create personalized AI agents capable of executing diverse functions on your computer, extending far beyond simple terminal interactions. Imagine having a versatile assistant that can understand your natural language commands and execute complex tasks, from managing files and automating workflows to generating content and even interacting with your codebase.
+
+### A Dynamic, Agent-Based Approach
+
+One of the core strengths of Gemini SH lies in its dynamic agent-based architecture. Depending on where you run the `geminiSH` command, you can create specialized agents tailored to specific tasks and environments. Here's how it works:
+
+- **Agent Creation**: When you execute the command within a directory, a `.geminiSH` folder is automatically created in that location. This folder serves as the agent's workspace, housing its configuration, history, and custom functions.
+- **Agent Configuration**: Each agent can be uniquely configured, allowing you to customize everything from the model used (e.g., `gemini-1.5-pro-latest`) to the maximum number of output tokens expected. This customization can even be done through natural language interactions with the model itself.
+- **Function Expansion**: Within the `.geminiSH` folder, you can create a `functions` directory to define custom Python functions that expand the agent's capabilities.
+- **Specialized Agents**: This dynamic structure empowers you to create specialized agents for different purposes. For instance, you can create an agent dedicated to code modification with a tailored system prompt and instructions, effectively building a coding assistant within your development environment.
 
 ### Core Features
 
@@ -42,8 +51,7 @@ Gemini SH opens up a world of possibilities for interacting with your computer:
 1. **Install Dependencies**: Ensure you have the required Python libraries installed. You can find a list of dependencies in the `requirements.txt` file (to be created).
 2. **Configure Gemini SH**:
    - Set your Google Gemini API key in `config.json` or as an environment variable (`GOOGLE_API_KEY`).
-   - Customize the `system_instructions.md` file with your desired prompts and guidelines for the Gemini model.
-   - Configure other system settings in `config.json` as needed.
+   - Configure other system settings in `config.json` if its needed.
 3. **Add Custom Functions**:
    - Create Python scripts in the `functions` directory, defining your desired functions.
    - Use docstrings to provide clear and comprehensive descriptions of each function for the model to understand.

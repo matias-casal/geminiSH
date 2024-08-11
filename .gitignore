@@ -1,11 +1,11 @@
 # Project ignore folders
 /data
-/cache
-#/workstation
+*/cache
 .cursorrules
 .DS_Store
 .exceptions
-
+.vscode
+.cursorrules
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,11 +1,50 @@
 {
-    "ac19009e-a0ee-4246-a0cd-9b104f844972": {
+    "5cd2e382-0ac7-4cd7-af17-36e401a5338a": {
         "turns": [
             {
                 "role": "model",
                 "parts": [
                     {
-                        "text": "## Bienvenido a GeminiSH\n\nTengo la capacidad de hacer muchas cosas, dime que quieres hacer\n"
+                        "text": "Welcome to Gemini SH!\n\n**Your Personalized AI Assistant for the Terminal and Beyond**\n\nGemini SH is designed to be your versatile AI assistant, capable of understanding and executing a wide range of tasks. It's more than just a terminal interface; it's a powerful tool that leverages Google Gemini's advanced AI capabilities to enhance your productivity and streamline your workflow.\n\n**Here are some of the ways you can interact with Gemini SH:**\n\n- **Type and Chat:** Use natural language to ask questions, give commands, and engage in conversations. Just type your requests as you would in a chat application.\n- **Speak Your Instructions:** Use the built-in recording feature to send audio instructions. Simply say what you want to record the audio or start the command with 'record', and Gemini SH will transcribe your voice.\n- **Show, Don't Just Tell:** Use the screenshot tool to capture visual information and provide context to your requests. For example, you can ask \"What's in this image on my screen?\"\n- **Drag and Drop Files:** Simply drag and drop files directly into the terminal to interact with them. You can analyze images, upload documents, or perform other actions based on the file's content, the content will undestand the path to your file.\n\n**Here are some examples of what you can do:**\n\n- **Analyze Images:** Drag and drop an image file into the terminal and ask \"What objects are in this image?\"\n- **Process Documents:** Upload a document and ask questions about its content, such as \"Summarize this document\" or \"Find all mentions of the word 'contract'.\"\n- **Control Your System:** Execute commands like \"Open the browser\" or \"Search for this archive on my Documents folder\"\n\n**Ready to explore?**\n\nTry some of these commands to get started:\n\n- **Type:** \"What is the capital of France?\"\n- **Speak:** \"I want to speak, record me\"\n- **Drag and Drop:** Drag a PDF file into the terminal and ask \"Summarize this document.\"\n\n**Gemini SH is constantly learning and evolving. Explore its capabilities and discover new ways to enhance your productivity!**\n\n**Tip:** You can create custom functions to extend Gemini SH's functionality. Check out the `functions` directory within the `.geminiSH` folder to learn more.\n"
+                    }
+                ]
+            }
+        ],
+        "created_at": "2024-08-11T13:45:32.149547"
+    },
+    "03d7d4ab-e339-4fb1-b1c0-8c185c798ddc": {
+        "turns": [
+            {
+                "role": "model",
+                "parts": [
+                    {
+                        "text": "Welcome to Gemini SH!\n\n**Your Personalized AI Assistant for the Terminal and Beyond**\n\nGemini SH is designed to be your versatile AI assistant, capable of understanding and executing a wide range of tasks. It's more than just a terminal interface; it's a powerful tool that leverages Google Gemini's advanced AI capabilities.\n\n**Here are some examples of what you can do:**\n\n- **Analyze Images:** Drag and drop an image file into the terminal and ask \"What objects are in this image?\" or \"Summarize this document\"\n- **Speak:** Ask to record your instructions an Gemini will listen to you, so you dont have to type everything.\n- **Control Your System:** Execute commands like \"Open the browser\" or \"Search for this archive on my Documents folder\"\n\n**Ask what you need**\n"
+                    }
+                ]
+            }
+        ],
+        "created_at": "2024-08-11T13:48:12.668423"
+    },
+    "eb1fd07c-4e57-461f-b9c4-42c4e3d6c0c6": {
+        "turns": [
+            {
+                "role": "model",
+                "parts": [
+                    {
+                        "text": "**Your Personalized AI Assistant for the Terminal and Beyond**\n\nGemini SH is designed to be your versatile AI assistant, capable of understanding and executing a wide range of tasks. It's more than just a terminal interface; it's a powerful tool that leverages Google Gemini's advanced AI capabilities.\n\n**Here are some examples of what you can do:**\n\n- **Analyze Images:** Drag and drop an image file into the terminal and ask \"What objects are in this image?\" or \"Summarize this document\"\n- **Speak:** Ask to record your instructions an Gemini will listen to you, so you dont have to type everything.\n- **Control Your System:** Execute commands like \"Open the browser\" or \"Search for this archive on my Documents folder\"\n\n**Ask what you need**\n"
+                    }
+                ]
+            }
+        ],
+        "created_at": "2024-08-11T13:48:48.331793"
+    },
+    "6f143e7c-d712-4115-8fa9-27c2d41740e4": {
+        "turns": [
+            {
+                "role": "model",
+                "parts": [
+                    {
+                        "text": "**Your Personalized AI Assistant for the Terminal and Beyond**\n\nGemini SH is designed to be your versatile AI assistant, capable of understanding and executing a wide range of tasks. It's more than just a terminal interface; it's a powerful tool that leverages Google Gemini's advanced AI capabilities.\n\n**Here are some examples of what you can do:**\n\n- **Analyze Images:** Drag and drop an image file into the terminal and ask \"What objects are in this image?\" or \"Summarize this document\"\n- **Speak:** Ask to record your instructions an Gemini will listen to you, so you dont have to type everything.\n- **Control Your System:** Execute commands like \"Open the browser\" or \"Search for this archive on my Documents folder\"\n\n**Ask what you need**\n"
                     }
                 ]
             },
@@ -13,11 +52,11 @@
                 "role": "user",
                 "parts": [
                     {
-                        "text": "dime que ves en mi pantalla"
+                        "text": "i want to talk with you"
                     }
                 ]
             }
         ],
-        "created_at": "2024-08-11T12:56:05.142273"
+        "created_at": "2024-08-11T13:49:21.306855"
     }
 }

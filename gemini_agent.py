@@ -46,5 +46,5 @@ class GeminiAgent:
 
     def exit(self):
         """Salir del bucle principal."""
-        self.output_manager.print("[bold italic yellow]Exiting...[/bold italic yellow]")
+        self.output_manager.print("\n[bold italic yellow]Exiting...[/bold italic yellow]\n")
         exit()
