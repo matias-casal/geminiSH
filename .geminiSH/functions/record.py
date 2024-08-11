@@ -3,11 +3,12 @@ import soundfile as sf
 import queue
 import tempfile
 import os
-from rich.console import Console
 import uuid
 from pydub import AudioSegment  # Import pydub
+from rich.prompt import Prompt
+from output_manager import OutputManager
 
-console = Console()
+output_manager = OutputManager()
 
 DEBUG = os.getenv('DEBUG')
 
@@ -35,7 +36,7 @@ def record(device_index: int = 0):
         if channels < 1:
             raise ValueError("The selected device has no input channels available.")
 
-        save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../cache')
+        save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'cache')
 
         if not os.path.exists(save_path):
             os.makedirs(save_path)
@@ -44,7 +45,7 @@ def record(device_index: int = 0):
         
         with sf.SoundFile(filename, mode='x', samplerate=samplerate, channels=channels) as file:
             with sd.InputStream(samplerate=samplerate, channels=channels, callback=callback):
-                with console.status("Recording..."):    
+                with output_manager.managed_status("[bold yellow]Recording... Press Ctrl+C to stop[/bold yellow]"):    
                     while True:
                         file.write(q.get())
                         
@@ -55,12 +56,21 @@ def record(device_index: int = 0):
         audio.export(mp3_filename, format='mp3')
         os.remove(filename)  # Remove the original WAV file
 
-        return {
-            "response": "The recording is ready, follow the user instructions.",
-            "response_to_agent": {"files_to_upload": [mp3_filename], 'require_execution_result': True}
-        }
+        while True:
+            action = Prompt.ask("[yellow]Do you want to [bold]send[/bold], [bold]re-record[/bold], or [bold]cancel[/bold] the recording?[/yellow]", choices=["send", "re", "cancel"], default="send")
+            if action == "send":
+                return {
+                    "response": "The recording is ready, follow the user instructions.",
+                    "response_to_agent": {"files_to_upload": [mp3_filename], 'require_execution_result': True}
+                }
+            elif action == "re":
+                output_manager.print("[bold yellow]Re-recording...[/bold yellow]")
+                return record(device_index)
+            elif action == "cancel":
+                os.remove(mp3_filename)  # Remove the MP3 file
+                return "[info]Recording cancelled[/info]"
 
     except Exception as e:
         if DEBUG:
-            console.print(f"[bold red]{type(e).__name__}: {str(e)}[/bold red]")
+            output_manager.print(e)
         return "[error]An error occurred while recording audio[/error]"

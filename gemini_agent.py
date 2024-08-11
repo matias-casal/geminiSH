@@ -3,7 +3,6 @@ import sys
 from chat_manager import ChatManager
 from function_manager import FunctionManager
 from output_manager import OutputManager
-from files_manager import FilesManager
 from input_manager import InputManager
 from config_manager import ConfigManager
 from state_manager import StateManager
@@ -11,14 +10,13 @@ from model_manager import ModelManager
 
 class GeminiAgent:
     def __init__(self):
-        self.output_manager = OutputManager()
+        self.config_manager = ConfigManager()
+        self.output_manager = OutputManager(self.config_manager)
         self.input_manager = InputManager(self.output_manager)
-        self.config_manager = ConfigManager(self.input_manager, self.output_manager)
-        self.files_manager = FilesManager(self.config_manager, self.output_manager)
         self.state_manager = StateManager(self.config_manager, self.output_manager)
         self.chat_manager = ChatManager(self.config_manager, self.output_manager, self.input_manager, self.state_manager)
         self.function_manager = FunctionManager(self.config_manager, self.chat_manager, self.output_manager, self.input_manager)
-        self.model_manager = ModelManager(self.config_manager, self.state_manager, self.function_manager, self.output_manager, self.chat_manager)
+        self.model_manager = ModelManager(self.config_manager, self.state_manager, self.function_manager, self.output_manager, self.input_manager, self.chat_manager)
         self.function_manager.set_model_manager(self.model_manager)
         
     def run(self):
@@ -42,9 +40,11 @@ class GeminiAgent:
             function_name = parts[0].lower()
             args = ' '.join(parts[1:])
             self.function_manager.functions[function_name](args)
- 
+        else:
+            self.chat_manager.add_text_part('user', user_input)
+            self.model_manager.generate_content()
 
     def exit(self):
         """Salir del bucle principal."""
-        self.output_manager.print("Saliendo...")
+        self.output_manager.print("[bold italic yellow]Exiting...[/bold italic yellow]")
         exit()

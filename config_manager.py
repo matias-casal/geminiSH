@@ -1,19 +1,16 @@
-# config_manager.py
 
-from email.policy import default
-import json
 import os
+import json
+import platform
 
 class ConfigManager:
     DEFAULT_DIR = ".geminiSH"
     CONFIG_FILE = "config.json"
     
-    def __init__(self, input_manager, output_manager):
-        self.input_manager = input_manager
-        self.output_manager = output_manager
+    def __init__(self):
         self.default_directory = self.get_directory()
-        self.config = self.load_config(os.path.join(self.default_directory, self.CONFIG_FILE), True)
-        self.agent_directory = self.get_agent_directory(self.config["AGENT_DIR"])
+        self.config = self.load_config(os.path.join(self.default_directory, self.CONFIG_FILE), True) or {}
+        self.agent_directory = self.get_agent_directory()
         self.directory = self.default_directory
         self.is_agent = False
         
@@ -22,7 +19,7 @@ class ConfigManager:
             if self.config_agent:
                 self.is_agent = True
                 self.directory = self.agent_directory
-                self.config = self.config.update(self.config_agent)
+                self.config.update(self.config_agent)
         
     def load_config(self, file_path, raise_error=False):
         """Carga la configuración principal desde el archivo config.json."""
@@ -32,27 +29,31 @@ class ConfigManager:
         elif raise_error:
             raise FileNotFoundError(f"El archivo de configuración: {file_path} no se encontró y por lo tanto no se puede continuar")
         else:
-            return False
+            return None
 
     def get_directory(self):
         """Devuelve la ruta del directorio donde se encuentra el programa."""
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), self.DEFAULT_DIR)
 
-    def get_agent_directory(self, default_agent_directory):
+    def get_agent_directory(self):
         """Devuelve la ruta del directorio del agente."""
-        return os.path.join(os.getcwd(), default_agent_directory)
+        return os.path.join(os.getcwd(), self.config.get("AGENT_DIR", self.DEFAULT_DIR))
+
     
-    def get_api_key(self):
-        """Checks if the GOOGLE_API_KEY is set, if not, prompts the user to enter it."""
-        if self.config["GOOGLE_API_KEY"]:
-            api_key = config["GOOGLE_API_KEY"]
-        elif os.environ.get("GOOGLE_API_KEY"):
-            api_key = os.environ["GOOGLE_API_KEY"]
-        else:
-            self.output_manager.print(
-                "API Key is not set. Please visit https://aistudio.google.com/app/apikey to obtain your API key.",
-                style="bold red",
-            )
-            api_key = self.input_manager.input("Enter your GOOGLE_API_KEY: ")
-        self.config["GOOGLE_API_KEY"] = api_key
-        return api_key
+    def get_system_information(self):
+        """Devuelve la información del sistema."""
+        datos_sistema = {
+            "system_name": os.uname().sysname,
+            "system_version": os.uname().version,
+            "system_architecture": os.uname().machine,
+            "platform": platform.system(),              
+            "platform_release": platform.release(),     
+            "platform_version": platform.version(),     
+            "platform_machine": platform.machine(),     
+            "platform_processor": platform.processor(), 
+            "python_version": platform.python_version(),
+            "python_build": platform.python_build(),    
+            "node_name": platform.node(),               
+            "system_uname": platform.uname(),           
+        }
+        return "\n".join([f"{key}: {value}" for key, value in datos_sistema.items()])

@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from google.protobuf.struct_pb2 import Struct
 from google.ai.generativelanguage import FunctionCall, FunctionResponse, Content, Part, FileData
+from prompt_toolkit.history import FileHistory
 
 FIRST_RUN_THRESHOLD = int(os.getenv("FIRST_RUN_THRESHOLD", 3))
 
@@ -28,6 +29,13 @@ class ChatManager:
             with open(history_file, "r") as f:
                 try:
                     chat_history = json.load(f)
+                    for session_id, session_data in chat_history.items():
+                        for turn in reversed(session_data['turns']):
+                            if turn['role'] == 'user':
+                                for part in reversed(turn['parts']):
+                                    if 'text' in part:
+                                        self.input_manager.history.append_string(part['text'])
+                                        
                 except json.JSONDecodeError:
                     chat_history = {}
                 if not self.config_manager.is_agent and len(chat_history.keys()) <= FIRST_RUN_THRESHOLD:
@@ -35,10 +43,10 @@ class ChatManager:
                 return chat_history
         else:
             with open(history_file, "w") as f:
-                json.dump({}, f, indent=4)
+                json.dump({}, f, indent=0)
             if not self.config_manager.is_agent:
                 self.state_manager.set_first_run(True)
-            return {}
+            return {}            
 
     def create_chat(self):
         """Crea un nuevo chat."""
@@ -67,12 +75,14 @@ class ChatManager:
             else:
                 self.current_chat.append(Content(parts=[proto_part], role=role))
                 last_turns.append({"role": role, "parts": [part]})
+            if save:
+                self.save_chat_history()
         else:
             self.create_chat()
             self.chat_history[self.chat_id]["turns"].append({"role": role, "parts": [part]})
             self.current_chat.append(Content(parts=[proto_part], role=role))
-        if save:
             self.save_chat_history()
+
 
     def add_text_part(self, role, text, save=True):
         """Adds a new user message to the chat history."""
@@ -113,5 +123,11 @@ class ChatManager:
                         self.add_function_call(role, part["function_call"]["name"], part["function_call"]["args"], save=False)
                     elif "function_response" in part:
                         self.add_function_response(role, part["function_response"]["name"], part["function_response"]["response"], save=False)
+                    elif "file_data" in part:
+                        expiry_time = datetime.fromisoformat(part["file_data"]["expiry_time"])
+                        if datetime.now() < expiry_time:
+                            self.add_file(part["file_data"], save=False)
+                        else:
+                            self.output_manager.warning(f"File {part['file_data']['original_path']} has expired and will not be loaded.")
         else:
             self.output_manager.error(f"Chat ID {chat_id} not found in history.")

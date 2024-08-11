@@ -1,10 +1,10 @@
 import pyautogui
 import os
 import uuid
-from rich.console import Console
-from screeninfo import get_monitors  # Importar screeninfo
+from screeninfo import get_monitors
+from output_manager import OutputManager
 
-console = Console()
+output_manager = OutputManager()
 
 DEBUG = os.getenv('DEBUG')
 
@@ -22,7 +22,7 @@ def take_screenshot(monitor_index=None):
         # Detectar el número de pantallas
         monitors = get_monitors()
         screenshots = []
-        save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../cache')
+        save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'cache')
         
         # Check if the save path exists, if not, create it
         if not os.path.exists(save_path):
@@ -34,17 +34,18 @@ def take_screenshot(monitor_index=None):
                 raise ValueError("Invalid monitor index")
             monitors = [monitors[monitor_index]]
 
-        for monitor in monitors:
-            # Generar un UUID para el nombre del archivo
-            file_name = f"{uuid.uuid4()}.png"
-            file_path = os.path.join(save_path, file_name)
-            
-            # Tomar una captura de pantalla del monitor específico
-            screenshot = pyautogui.screenshot(region=(monitor.x, monitor.y, monitor.width, monitor.height))
-            
-            # Guardar la captura de pantalla
-            screenshot.save(file_path)
-            screenshots.append(file_path)
+        with output_manager.managed_status("[bold yellow]Taking screenshot...[/bold yellow]"):
+            for monitor in monitors:
+                # Generar un UUID para el nombre del archivo
+                file_name = f"{uuid.uuid4()}.png"
+                file_path = os.path.join(save_path, file_name)
+                
+                # Tomar una captura de pantalla del monitor específico
+                screenshot = pyautogui.screenshot(region=(monitor.x, monitor.y, monitor.width, monitor.height))
+                
+                # Guardar la captura de pantalla
+                screenshot.save(file_path)
+                screenshots.append(file_path)
         
         return {
             "response": f"Screenshots taken successfully. Number of monitors detected: {len(monitors)}",
@@ -52,5 +53,5 @@ def take_screenshot(monitor_index=None):
         }
     except Exception as e:
         if DEBUG:
-            console.print(f"[bold red]{type(e).__name__}: {str(e)}[/bold red]")
+            output_manager.print(e)
         return "[error]An error occurred while taking the screenshots[/error]"

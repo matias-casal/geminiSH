@@ -1,23 +1,35 @@
 import os
 import inspect
+from contextlib import contextmanager
 from rich.console import Console
 from rich.markdown import Markdown
 
 DEBUG = int(os.getenv("DEBUG", 0))
 
 class OutputManager:
-    def __init__(self): 
-        self.console = Console()
+    _instance = None
 
-    def print(self, text, markdown=False, style=""):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, config_manager=None): 
+        if not hasattr(self, 'initialized'):  # Ensure __init__ is only called once
+            self.console = Console()
+            self._status_stack = []
+            self.initialized = True
+            self.config_manager = config_manager
+            
+    def print(self, text, markdown=False, style="", end="\n"):
         """Imprime texto en la consola."""
         if not text:
             return
         if markdown:
-            self.console.print(Markdown(text, style=style)) # type: ignore
+            self.console.print(Markdown(text, style=style)) 
         else:
-            self.console.print(text, style=style)
-            
+            self.console.print(text, style=style, end=end)
+                
     def debug(self, text, level=1):
         """Imprime texto en la consola segun el nivel de debug."""
         caller_frame = inspect.stack()[1]
@@ -33,3 +45,35 @@ class OutputManager:
     def warning(self, text):
         """Imprime texto en la consola como un warning."""
         self.console.print(f"[yellow][bold]WARNING:[/bold] {text}[/yellow]")
+
+    @contextmanager
+    def managed_status(self, message):
+        """
+        Context manager to handle nested console statuses.
+        """
+        if self._status_stack:
+            self._status_stack[-1].stop()
+
+        status = self.console.status(message)
+        self._status_stack.append(status)
+        status.start()
+
+        try:
+            yield
+        finally:
+            status.stop()
+            self._status_stack.pop()
+            
+    @contextmanager
+    def stop_status(self):
+        """
+        Detiene el estado actual, ejecuta una acción y reinicia el estado.
+        """
+        if self._status_stack:
+            self._status_stack[-1].stop()
+
+        try:
+            yield
+        finally:
+            if self._status_stack:
+                self._status_stack[-1].start()

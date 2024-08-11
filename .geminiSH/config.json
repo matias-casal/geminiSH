@@ -2,11 +2,11 @@
   "GOOGLE_API_KEY": "",
   "DEBUG": false,
   "AGENT_DIR": ".geminiSH",
+  "REMOVE_CACHE_AFTER_LOAD": false,
   "SAVE_PROMPT_HISTORY": true,
   "SAVE_OUTPUT_HISTORY": true,
   "WARNING_TOKENS_THRESHOLD": 0.9,
-  "MODEL_NAME": "gemini-1.5-pro-latest",
-  "MODEL_MAX_OUTPUT_TOKENS": 4000,
+  "MODEL_NAME": "gemini-1.5-pro-exp-0801",
   "MODEL_MAX_TOKENS": 2097152,
   "MODEL_SUPPORTED_MIME_TYPES": [
     "text/plain",

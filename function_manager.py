@@ -81,7 +81,6 @@ class FunctionManager:
     def _convert_python_type_to_proto_type(self, python_type):
         """Convierte un tipo de Python a un tipo proto correspondiente."""
         actual_type = python_type[1] if isinstance(python_type, tuple) else python_type
-        self.output_manager.debug(f"actual_type: {actual_type}")
         if actual_type == str:
             return Schema(type_=Type.STRING)
         elif actual_type == int:
@@ -119,5 +118,8 @@ class FunctionManager:
             elif 'files' in response:
                 for file in response['files']:
                     self.chat_manager.add_file(file)
-            if 'require_execution_result' in response:
+            elif 'require_execution_result' in response:
                 self.model_manager.generate_content()
+            elif 'load_chat_history' in response:
+                self.functions['load_chat_history'](response['load_chat_history'])
+            
