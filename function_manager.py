@@ -2,6 +2,7 @@ import os
 import importlib
 import inspect
 from pathlib import Path
+from time import sleep
 from google.ai.generativelanguage import FunctionDeclaration, Schema, Type
 
 class FunctionManager:

@@ -4,6 +4,7 @@
 #/workstation
 .cursorrules
 .DS_Store
+.exceptions
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

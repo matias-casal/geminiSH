@@ -71,6 +71,7 @@ class ModelManager:
                 response = self.model.generate_content(self.chat_manager.current_chat)
             return self.handle_gemini_response(response)
         except Exception as e:
+            print(e)
             self.output_manager.print(f"An error occurred: {e}", style="bold red")
             choice = self.input_manager.choose("Do you want to retry?", choices=["yes", "no"], default="yes")
             if choice == "yes":
@@ -99,24 +100,30 @@ class ModelManager:
         gemini_shown = False
         for part in response_dict['candidates'][0]['content']['parts']:
             last_text_part = False
-            if 'text' in part:
-                if not gemini_shown:
-                    self.output_manager.print(part['text'], style="bold blue", markdown=True)
-                    gemini_shown = True
-                self.chat_manager.add_text_part('model', part['text'])
-                last_text_part = part['text']
-            if 'function_call' in part and part['function_call']:
-                self.output_manager.debug(f"Function call: {part['function_call']}")
-                status = "[bold yellow]Gemini is executing function...[/bold yellow]"
-                if last_text_part:
-                    status = "[yellow]{last_text_part}[/bold]"
-                with self.output_manager.managed_status(status):
-                    function_call = part['function_call']
-                    function_name = function_call.get('name')
-                    function_args = function_call.get('args', {})
-                    self.chat_manager.add_function_call('model', function_name, function_args)
-                    response = self.function_manager.execute_function(function_name, function_args)
-                    function_responses.append((function_name, response))
+            try:
+                if 'text' in part:
+                    if not gemini_shown:
+                        self.output_manager.print(part['text'], style="bold blue", markdown=True)
+                        gemini_shown = True
+                    self.chat_manager.add_text_part('model', part['text'])
+                    last_text_part = part['text']
+                if 'function_call' in part and part['function_call']:
+                    self.output_manager.debug(f"Function call: {part['function_call']}")
+                    status = "[yellow bold]Gemini is executing function...[/yellow bold]"
+                    if last_text_part:
+                         status = f"[blue]{last_text_part}[/blue]"
+                    self.output_manager.debug(f"Status: {status}")
+                    with self.output_manager.managed_status(status):
+                        function_call = part['function_call']
+                        function_name = function_call.get('name')
+                        function_args = function_call.get('args', {})
+                        self.output_manager.debug(f"Function name: {function_name} | Function args: {function_args}")
+                        self.chat_manager.add_function_call('model', function_name, function_args)
+                        response = self.function_manager.execute_function(function_name, function_args)
+                        self.output_manager.debug(f"Function response: {response}")
+                        function_responses.append((function_name, response))
+            except Exception as e:
+                print(e)
                 
         for function_name, response in function_responses:
             if isinstance(response, str):

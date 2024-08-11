@@ -28,7 +28,7 @@ class OutputManager:
         if markdown:
             self.console.print(Markdown(text, style=style)) 
         else:
-            self.console.print(text, style=style, end=end)
+            self.console.print(text, end=end)
                 
     def debug(self, text, level=1):
         """Imprime texto en la consola segun el nivel de debug."""
@@ -40,7 +40,7 @@ class OutputManager:
             if level >= 2 and DEBUG >= 2:
                 self.print(f"[yellow][bold italic]DEBUG:[/bold italic] {text}[/yellow]\n[italic][blue]({caller_info})[/blue][/italic]")
             if level >= 3 and DEBUG == 3:
-                self.print(f"[red][bold italic]DEBUG:[/bold italic][/red]")
+                self.print(f"[red][bold italic]DEBUG:[/bold italic] {text}[/red]\n[italic][blue]({caller_info})[/blue][/italic]")
             
     def warning(self, text):
         """Imprime texto en la consola como un warning."""

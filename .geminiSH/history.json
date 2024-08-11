@@ -1,0 +1,23 @@
+{
+    "ac19009e-a0ee-4246-a0cd-9b104f844972": {
+        "turns": [
+            {
+                "role": "model",
+                "parts": [
+                    {
+                        "text": "## Bienvenido a GeminiSH\n\nTengo la capacidad de hacer muchas cosas, dime que quieres hacer\n"
+                    }
+                ]
+            },
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": "dime que ves en mi pantalla"
+                    }
+                ]
+            }
+        ],
+        "created_at": "2024-08-11T12:56:05.142273"
+    }
+}
