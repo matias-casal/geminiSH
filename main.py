@@ -11,11 +11,6 @@ def main():
         agent.run()
     except KeyboardInterrupt:
         agent.exit()
-    except Exception as e:
-        agent.output_manager.print(f"An unexpected error occurred: {e}", style="bold red")
-        if DEBUG:
-            traceback.print_exc()
-        agent.exit()
 
 if __name__ == "__main__":
     try:

@@ -18,13 +18,13 @@ class StateManager:
             agent_instructions_path = os.path.join(self.config_manager.get_agent_directory(), "prompts", "system_instructions.md")
             if os.path.exists(agent_instructions_path):
                 with open(agent_instructions_path, "r") as f:
-                    self.state["system_instructions"] = f.read()
+                    self.state["system_instructions"] = f.read() or " "
                 return
         
         default_instructions_path = os.path.join(self.config_manager.get_directory(), "prompts", "system_instructions.md")
         if os.path.exists(default_instructions_path):
             with open(default_instructions_path, "r") as f:
-                self.state["system_instructions"] = f.read()
+                self.state["system_instructions"] = f.read() or " "
         else:
             self.output_manager.debug(f"System instructions not found in {default_instructions_path}")
             raise Exception("System instructions not found.")

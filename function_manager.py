@@ -5,8 +5,9 @@ from pathlib import Path
 from google.ai.generativelanguage import FunctionDeclaration, Schema, Type
 
 class FunctionManager:
-    def __init__(self, config_manager, output_manager, input_manager):
+    def __init__(self, config_manager, chat_manager, output_manager, input_manager):
         self.config_manager = config_manager
+        self.chat_manager = chat_manager
         self.output_manager = output_manager
         self.input_manager = input_manager
         self.functions = self.load_functions()
@@ -38,7 +39,7 @@ class FunctionManager:
                             if callable(func) and not func_name.startswith("__") and not inspect.isclass(func):
                                 functions[func_name] = func
                     except Exception as e:
-                        self.output_manager.debug(f"Error loading function '{func_name}' from '{filename}': {type(e).__name__} - {e}")
+                        self.output_manager.debug(f"Error loading function from '{filename}': {e}")
         
         if not functions and not is_agent:
             self.output_manager.debug(f'functions_directory: {functions_directory}')
@@ -46,6 +47,10 @@ class FunctionManager:
 
         return functions
 
+    def set_model_manager(self, model_manager):
+        """Establece el model_manager después de la inicialización."""
+        self.model_manager = model_manager
+        
     def get_as_declarations(self):
         """Convierte las funciones en declaraciones de función."""
         return [self._create_function_declaration(func) for func in self.functions.values()]
@@ -76,7 +81,7 @@ class FunctionManager:
     def _convert_python_type_to_proto_type(self, python_type):
         """Convierte un tipo de Python a un tipo proto correspondiente."""
         actual_type = python_type[1] if isinstance(python_type, tuple) else python_type
-
+        self.output_manager.debug(f"actual_type: {actual_type}")
         if actual_type == str:
             return Schema(type_=Type.STRING)
         elif actual_type == int:
@@ -88,12 +93,31 @@ class FunctionManager:
         elif isinstance(actual_type, list):
             item_type = self._convert_python_type_to_proto_type(actual_type[0])
             return Schema(type=Type.ARRAY, items=item_type)
+        elif actual_type == dict:
+            return Schema(type_=Type.OBJECT)
         else:
             return Schema(type_=Type.STRING)
 
-    def execute_function(self, function_name, *args, **kwargs):
+    def execute_function(self, function_name, args):
         """Ejecuta una función con los argumentos proporcionados."""
         if function_name in self.functions:
-            return self.functions[function_name](*args, **kwargs)
+            try:
+                return self.functions[function_name](**args)
+            except Exception as e:
+                return f"[error]Error executing function: {e}[/error]"
         else:
-            raise ValueError(f"Función no encontrada: {function_name}")
+            return f"[error]Function not found: {function_name}[/error]"
+        
+    def handle_agent_functions_response(self, response):
+        """Maneja la respuesta de una función del agente."""
+        if isinstance(response, dict):
+            if 'files_to_upload' in response:
+                file_paths = response['files_to_upload']
+                upload_response = self.functions['upload_files'](file_paths)
+                for file in upload_response['response_to_agent']['files']:
+                    self.chat_manager.add_file(file)
+            elif 'files' in response:
+                for file in response['files']:
+                    self.chat_manager.add_file(file)
+            if 'require_execution_result' in response:
+                self.model_manager.generate_content()
