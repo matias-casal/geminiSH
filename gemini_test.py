@@ -31,6 +31,7 @@ class StateManager:
 
     def is_first_run(self):
         """Verifica si es la primera vez que se ejecuta la aplicación."""
+        
         return self.state.get("is_first_run", False)
 
     def set_first_run(self, is_first_run):

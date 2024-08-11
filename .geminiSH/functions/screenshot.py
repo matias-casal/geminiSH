@@ -12,6 +12,7 @@ def take_screenshot(monitor_index=None):
     """
     Take a screenshot of one or all monitors and save it to the cache directory. If the users referes to what you see in
     the screen, or say something like "what do you see" in the computer, or screen, use this function.
+    
     Parameters:
     monitor_index (int, optional): The index of the monitor to capture. If not provided, captures all monitors.
 

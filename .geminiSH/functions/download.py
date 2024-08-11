@@ -16,15 +16,6 @@ output_manager = OutputManager()
 
 DEBUG = os.getenv('DEBUG')
 
-SUPPORTED_MIME_TYPES = [
-    "application/pdf",
-    "audio/mpeg",
-    "audio/wav",
-    "video/mp4",
-    "image/jpeg",
-    "image/png",
-]
-
 progress = Progress(
     TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
     BarColumn(bar_width=None),
@@ -48,6 +39,7 @@ def download(url: str):
     Returns:
     str | file: Contains the text content if readable, or the file.
     """
+    SUPPORTED_MIME_TYPES = output_manager.config_manager.config["MODEL_SUPPORTED_MIME_TYPES"]
     try:
         filename = url.split("/")[-1]
         response = urlopen(url)

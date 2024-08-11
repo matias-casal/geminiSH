@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from rich.console import Console
 from rich.markdown import Markdown
 
-DEBUG = int(os.getenv("DEBUG", 0))
+DEBUG = 1 if os.getenv("DEBUG", "False") == "True" else 0
 
 class OutputManager:
     _instance = None

@@ -48,4 +48,4 @@ class InputManager:
     def choose(self, text, choices, default=None):
         """Imprime texto en la consola y espera una respuesta del usuario."""
         with self.output_manager.stop_status():
-            return Prompt.ask(text, choices=choices, default=default)
+            return Prompt.ask(f"[yellow]{text}[/yellow]", choices=choices, default=default)

@@ -4,6 +4,9 @@ import inspect
 from pathlib import Path
 from time import sleep
 from google.ai.generativelanguage import FunctionDeclaration, Schema, Type
+import subprocess
+import sys
+import re
 
 class FunctionManager:
     def __init__(self, config_manager, chat_manager, output_manager, input_manager):
@@ -17,7 +20,7 @@ class FunctionManager:
             self.functions.update(agent_functions)
             
     def load_functions(self, is_agent=False):
-        """Carga las funciones desde la carpeta functions."""
+        """Carga las funciones desde la carpeta functions y verifica las dependencias."""
         functions = {}
         if is_agent:
             functions_directory = os.path.join(self.config_manager.get_agent_directory(), "functions")
@@ -32,6 +35,14 @@ class FunctionManager:
                     try:
                         module_name = filename[:-3]
                         module_path = os.path.join(functions_directory, filename)
+                        
+                        # Check and install missing dependencies
+                        try:
+                            self._check_and_install_dependencies(module_path)
+                        except Exception as e:
+                            self.output_manager.debug(f"Error checking and installing dependencies for '{filename}': {e}")
+                            continue
+                        
                         spec = importlib.util.spec_from_file_location(module_name, module_path)
                         module = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(module)
@@ -47,7 +58,22 @@ class FunctionManager:
             self.output_manager.warning("No se encontraron funciones en el modo default, lo cual no es normal. Gemini se ejecutara sin sus funciones basicas.")
 
         return functions
-
+    
+    def _check_and_install_dependencies(self, module_path):
+        """Verifica e instala las dependencias necesarias para un módulo."""
+        with open(module_path, "r") as file:
+            content = file.read()
+        
+        # Find all import statements
+        imports = re.findall(r'^\s*(?:import|from)\s+([a-zA-Z0-9_\.]+)', content, re.MULTILINE)
+        
+        for package in imports:
+            try:
+                importlib.import_module(package.split('.')[0])
+            except ImportError:
+                self.output_manager.debug(f"Installing missing package: {package}")
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package.split('.')[0]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                
     def set_model_manager(self, model_manager):
         """Establece el model_manager después de la inicialización."""
         self.model_manager = model_manager
@@ -116,11 +142,11 @@ class FunctionManager:
                 upload_response = self.functions['upload_files'](file_paths)
                 for file in upload_response['response_to_agent']['files']:
                     self.chat_manager.add_file(file)
-            elif 'files' in response:
+            if 'files' in response:
                 for file in response['files']:
                     self.chat_manager.add_file(file)
-            elif 'require_execution_result' in response:
+            if 'require_execution_result' in response:
                 self.model_manager.generate_content()
-            elif 'load_chat_history' in response:
+            if 'load_chat_history' in response:
                 self.functions['load_chat_history'](response['load_chat_history'])
             

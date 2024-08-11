@@ -7,15 +7,6 @@ output_manager = OutputManager()
 
 DEBUG = os.getenv('DEBUG')
 
-SUPPORTED_MIME_TYPES = [
-    "application/pdf",
-    "audio/mpeg",
-    "audio/wav",
-    "video/mp4",
-    "image/jpeg",
-    "image/png",
-]
-
 def get_content_of_folder(directory_path, recursive=True):
     """
     Processes a directory and get the content. 
@@ -28,6 +19,7 @@ def get_content_of_folder(directory_path, recursive=True):
     Returns:
     str | file: Contains text content from readable files and the compatible files.
     """
+    SUPPORTED_MIME_TYPES = output_manager.config_manager.config["MODEL_SUPPORTED_MIME_TYPES"]
     text_files_content = {}
     files_to_upload = []
     num_bytes = 1024

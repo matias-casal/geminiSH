@@ -6,15 +6,6 @@ output_manager = OutputManager()
 
 DEBUG = os.getenv('DEBUG')
 
-SUPPORTED_MIME_TYPES = [
-    "application/pdf",
-    "audio/mpeg",
-    "audio/wav",
-    "video/mp4",
-    "image/jpeg",
-    "image/png",
-]
-
 def get_content_file(file_path):
     """
     Processes a single file and get the content.
@@ -28,6 +19,7 @@ def get_content_file(file_path):
     str | file: Contains the text content if readable, or the file.
     """
     num_bytes = 1024
+    SUPPORTED_MIME_TYPES = output_manager.config_manager.config["MODEL_SUPPORTED_MIME_TYPES"]
     try:
         with output_manager.managed_status("[bold yellow]Processing file...[/bold yellow]"):
             try:

@@ -1,3 +1,4 @@
+from PIL import Image
 import os
 import mimetypes
 import json
@@ -6,6 +7,9 @@ import google.generativeai as genai
 from output_manager import OutputManager
 
 output_manager = OutputManager()
+
+USE_CACHE = False
+
 
 def upload_files(file_paths: list, expiry_time: str = '', force_upload: bool = False) -> dict | str:
     """
@@ -26,54 +30,55 @@ def upload_files(file_paths: list, expiry_time: str = '', force_upload: bool = F
     for file_path in file_paths:
         mime_type, _ = mimetypes.guess_type(file_path)
         
-        if mime_type in SUPPORTED_MIME_TYPES:
-            # Check and create cache.json if it doesn't exist
-            if not output_manager.config_manager.config["REMOVE_CACHE_AFTER_LOAD"] and not force_upload:
-                cache_file_path = os.path.join(os.path.dirname(__file__), '..', 'cache.json')
-                if not os.path.exists(cache_file_path):
-                    with open(cache_file_path, 'w') as cache_file:
-                        json.dump([], cache_file)
-
-                # Load existing cache data
-                with open(cache_file_path, 'r') as cache_file:
-                    cache_data = json.load(cache_file)
-
-                # Check if file is already in cache and not expired
-                cached_file = next((item for item in cache_data if item["original_path"] == file_path and datetime.fromisoformat(item["expiry_time"]) > datetime.now()), None)
-                if cached_file:
-                    output_manager.debug(f"File found in cache: {cached_file}")
-                    uploaded_files.append(cached_file)
-                    continue
-
-            with output_manager.managed_status("[bold yellow]Gemini is uploading a file...[/bold yellow]"):
-                response = genai.upload_file(file_path)
-                responses.append(response)      
-
-            if not expiry_time:
-                expiry_time = (datetime.now() + timedelta(hours=48)).isoformat()
-
-            file_data = response.to_dict()
-            file_data = {
-                "uri": file_data['uri'],
-                "mime_type": file_data['mime_type'],
-                "expiry_time": expiry_time,
-                "creation_time": datetime.now().isoformat(),
-                "original_path": file_path
-            }
-            output_manager.debug(f"Uploading file: {file_data}")
-            uploaded_files.append(file_data)
-
-            if output_manager.config_manager.config["REMOVE_CACHE_AFTER_LOAD"]:
-                os.remove(file_path)
-            else:
-                # Append new file data to cache
-                cache_data.append(file_data)
-
-                # Save updated cache data
-                with open(cache_file_path, 'w') as cache_file:
-                    json.dump(cache_data, cache_file, indent=4)
-        else:
+        if mime_type not in SUPPORTED_MIME_TYPES:
             return f"[error]Unsupported file type: {file_path}[/error]"
+        
+        # Check and create cache.json if it doesn't exist
+        if not output_manager.config_manager.config["REMOVE_CACHE_AFTER_LOAD"] and not force_upload and USE_CACHE:
+            cache_file_path = os.path.join(os.path.dirname(__file__), '..', 'cache.json')
+            if not os.path.exists(cache_file_path):
+                with open(cache_file_path, 'w') as cache_file:
+                    json.dump([], cache_file)
+
+            # Load existing cache data
+            with open(cache_file_path, 'r') as cache_file:
+                cache_data = json.load(cache_file)
+
+            # Check if file is already in cache and not expired
+            cached_file = next((item for item in cache_data if item["original_path"] == file_path and datetime.fromisoformat(item["expiry_time"]) > datetime.now()), None)
+            if cached_file:
+                cached_file['uri'] = cached_file['uri']
+                output_manager.debug(f"File found in cache: {cached_file}")
+                uploaded_files.append(cached_file)
+                continue
+
+        with output_manager.managed_status("[bold yellow]Gemini is uploading a file...[/bold yellow]"):
+            response = genai.upload_file(file_path)
+            responses.append(response)      
+
+        if not expiry_time:
+            expiry_time = (datetime.now() + timedelta(hours=48)).isoformat()
+
+        file_data = response.to_dict()
+        file_data = {
+            "uri": file_data['uri'],
+            "mime_type": file_data['mime_type'],
+            "expiry_time": expiry_time,
+            "creation_time": datetime.now().isoformat(),
+            "original_path": file_path
+        }
+        output_manager.debug(f"Uploading file: {file_data}")
+        uploaded_files.append(file_data)
+
+        if output_manager.config_manager.config["REMOVE_CACHE_AFTER_LOAD"]:
+            os.remove(file_path)
+        elif USE_CACHE:
+            # Append new file data to cache
+            cache_data.append(file_data)
+
+            # Save updated cache data
+            with open(cache_file_path, 'w') as cache_file:
+                json.dump(cache_data, cache_file, indent=4)
 
     output_manager.debug(f"Uploaded files: {uploaded_files}")
     return {

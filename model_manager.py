@@ -18,7 +18,7 @@ class ModelManager:
 
     def first_message(self):
         """Método para enviar el primer mensaje al modelo."""
-        self.output_manager.print(f"\n\n# {self.MODEL_PRESENTATION}", style="bold magenta", markdown=True)
+        self.output_manager.print(f"\n\n# {self.MODEL_PRESENTATION}", style="bold bright_yellow", markdown=True)
         if self.state_manager.is_first_run():    
             first_runs_path = os.path.join(self.config_manager.directory, "prompts", "first_runs.md")
             if os.path.exists(first_runs_path):
@@ -92,35 +92,27 @@ class ModelManager:
         if not (response_dict.get('candidates') and 
                 response_dict['candidates'][0].get('content') and 
                 response_dict['candidates'][0]['content'].get('parts')):
-            self.output_manager.warning("The model did not provide a response.")
+            self.output_manager.warning("The model did not provide a response. If you upload files, they probably are not supported.")
             self.output_manager.debug(f"Model response: {response_dict}")
             return None
         
         function_responses = []
-        gemini_shown = False
         for part in response_dict['candidates'][0]['content']['parts']:
-            last_text_part = False
+            self.output_manager.debug(f"Part: {part}")
             try:
                 if 'text' in part:
-                    if not gemini_shown:
-                        self.output_manager.print(part['text'], style="bold blue", markdown=True)
-                        gemini_shown = True
+                    self.output_manager.print(f"{part['text']}", style="blue", markdown=True)
+                    self.output_manager.print("\n")
                     self.chat_manager.add_text_part('model', part['text'])
-                    last_text_part = part['text']
                 if 'function_call' in part and part['function_call']:
                     self.output_manager.debug(f"Function call: {part['function_call']}")
-                    status = "[yellow bold]Gemini is executing function...[/yellow bold]"
-                    if last_text_part:
-                         status = f"[blue]{last_text_part}[/blue]"
-                    self.output_manager.debug(f"Status: {status}")
-                    with self.output_manager.managed_status(status):
+                    with self.output_manager.managed_status("[yellow bold]Gemini is executing function...[/yellow bold]"):
                         function_call = part['function_call']
                         function_name = function_call.get('name')
                         function_args = function_call.get('args', {})
                         self.output_manager.debug(f"Function name: {function_name} | Function args: {function_args}")
                         self.chat_manager.add_function_call('model', function_name, function_args)
                         response = self.function_manager.execute_function(function_name, function_args)
-                        self.output_manager.debug(f"Function response: {response}")
                         function_responses.append((function_name, response))
             except Exception as e:
                 print(e)

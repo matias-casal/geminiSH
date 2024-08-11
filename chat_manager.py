@@ -7,7 +7,7 @@ from google.protobuf.struct_pb2 import Struct
 from google.ai.generativelanguage import FunctionCall, FunctionResponse, Content, Part, FileData
 from prompt_toolkit.history import FileHistory
 
-FIRST_RUN_THRESHOLD = int(os.getenv("FIRST_RUN_THRESHOLD", 3))
+FIRST_RUN_THRESHOLD = int(os.getenv("FIRST_RUN_THRESHOLD", 100))
 
 class ChatManager:
     HISTORY_FILE_NAME = "history.json"

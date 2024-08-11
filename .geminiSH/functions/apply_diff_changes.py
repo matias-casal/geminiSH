@@ -4,14 +4,11 @@ from output_manager import OutputManager
 
 output_manager = OutputManager()
 
-def change_file_content(file_path, diff_text):
+def apply_diff_changes(file_path, diff_text):
     """
-    Use this function to apply a unified git diff to a specific file, especially when working with programming files
-    or any text-based files. It is particularly useful when you have a patch or diff that needs to be applied to source 
-    code or configuration files. If you can explain to the user the change.
-
-    Do Not Use When:
-        To add, edit, or remove text from a file.
+    Use this function to apply a modification to a text-based files (especially when working with programming files).
+    Send changes as a unified git diff to a specific file.
+    After this function is executed, the file will be modified.
 
     Args:
         file_path (str): The path to the file to which the diff will be applied.
