@@ -1,8 +1,11 @@
 ![Gemini SH](assets/GeminiSH.jpg)
 
-## Gemini SH: Your Personalized AI Agent for Enhanced Productivity
+# Gemini SH: Your Personalized AI Agent for Enhanced Productivity
 
 **Gemini SH** is a powerful Python library that leverages the capabilities of Google Gemini to create personalized AI agents capable of executing diverse functions on your computer, extending far beyond simple terminal interactions. Imagine having a versatile assistant that can understand your natural language commands and execute complex tasks, from managing files and automating workflows to generating content and even interacting with your codebase.
+
+## Watch the promotional video:
+[![Watch the promotional video](https://img.youtube.com/vi/tSNp36ZvjlQ/0.jpg)](https://www.youtube.com/watch?v=tSNp36ZvjlQ)
 
 ### A Dynamic, Agent-Based Approach
 
@@ -153,4 +156,4 @@ Contributions to Gemini SH are welcome! You can contribute by:
 
 This project is inspired by the power and flexibility of Google Gemini and the potential it holds for revolutionizing human-computer interaction.
 
-[![Watch the promotional video](https://img.youtube.com/vi/tSNp36ZvjlQ/0.jpg)](https://www.youtube.com/watch?v=tSNp36ZvjlQ)
+
