@@ -1,3 +1,8 @@
+"""
+This module manages the input operations for the GeminiSH application.
+It handles user input, including command history and auto-suggestions.
+"""
+
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -6,19 +11,27 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from rich.prompt import Prompt
 
+
 class InputManager:
+    """
+    The InputManager class handles user input operations for the GeminiSH application.
+    It manages command history, auto-suggestions, and key bindings for an enhanced user
+    experience. The class is designed as a singleton to ensure consistent input handling
+    across the application.
+    """
+    
     _instance = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)  
+            cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self, output_manager=None):
-        if not hasattr(self, 'initialized'): 
+        if not hasattr(self, "initialized"):
             self.output_manager = output_manager
             self.history = InMemoryHistory()
-            
+
             # Define key bindings
             kb = KeyBindings()
 
@@ -41,11 +54,13 @@ class InputManager:
 
     def input(self, message="[bold green]> [/bold green]"):
         """Read a message from the user."""
-        with self.output_manager.stop_status():
-            self.output_manager.print(message, end="")
-            return self.session.prompt()
-        
+        if self.output_manager:
+            with self.output_manager.stop_status():
+                self.output_manager.print(message, end="")
+                return self.session.prompt()
+
     def choose(self, text, choices, default=None):
         """Print text to console and wait for user response."""
-        with self.output_manager.stop_status():
-            return Prompt.ask(f"[yellow]{text}[/yellow]", choices=choices, default=default)
+        if self.output_manager:
+            with self.output_manager.stop_status():
+                return Prompt.ask(f"[yellow]{text}[/yellow]", choices=choices, default=default)

@@ -1,47 +1,59 @@
+"""
+This module provides functionality to retrieve the content of a single file 
+for the GeminiSH application.
+"""
+
 import os
 import mimetypes
 from output_manager import OutputManager
 
 output_manager = OutputManager()
 
-DEBUG = os.getenv('DEBUG')
+DEBUG = os.getenv("DEBUG")
 
 def get_content_file(file_path):
     """
     Processes a single file and gets the content.
-    If the user wants to work with a single file, execute this function first, and wait for the response.
+    If the user wants to work with a single file, execute this function first.
 
     Parameters:
     file_path (str): The absolute path of the file to process.
-    num_bytes (int): Number of bytes to read from the file to determine if it's a readable text file.
 
     Returns:
     str | file: Contains the text content if readable, or the file.
     """
     num_bytes = 1024
-    SUPPORTED_MIME_TYPES = output_manager.config_manager.config["MODEL_SUPPORTED_MIME_TYPES"]
+    supported_mime_types = output_manager.config_manager.config["MODEL_SUPPORTED_MIME_TYPES"]
     try:
         with output_manager.managed_status("[bold yellow]Processing file...[/bold yellow]"):
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     f.read(num_bytes)
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
-                content = f"---Start of file {os.path.basename(file_path)}---\n{content}\n---End of file {os.path.basename(file_path)}---"
+                file_name = os.path.basename(file_path)
+                content = (
+                    f"---Start of file {file_name}---\n"
+                    f"{content}\n"
+                    f"---End of file {file_name}---"
+                )
                 return {
                     "response": content,
-                    "response_to_agent": {'require_execution_result': True}
+                    "response_to_agent": {"require_execution_result": True},
                 }
             except (UnicodeDecodeError, IOError):
                 mime_type, _ = mimetypes.guess_type(file_path)
-                if mime_type in SUPPORTED_MIME_TYPES:
+                if mime_type in supported_mime_types:
                     return {
-                        "response_to_agent": {"files_to_upload": [file_path], 'require_execution_result': True}
+                        "response_to_agent": {
+                            "files_to_upload": [file_path],
+                            "require_execution_result": True,
+                        }
                     }
                 else:
                     return {
                         "response": "File is not supported.",
-                        "response_to_agent": {'require_execution_result': False}
+                        "response_to_agent": {"require_execution_result": False},
                     }
     except Exception as e:
         if DEBUG:
