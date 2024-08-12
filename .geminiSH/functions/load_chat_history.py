@@ -44,12 +44,10 @@ def load_chat_history(chat_id=None, load_nth_last=None, return_all=False):
                 return f"[error]An error occurred while loading the history[/error]"
 
         if load_nth_last is not None:
-            # Load the nth last chat history (considering reversed order)
+            # Load the nth last chat history
             try:
-                nth_last_chat_id = list(history_data.keys())[load_nth_last - 1]  # Adjusted index for reversed order
-                nth_last_chat = history_data[nth_last_chat_id]
+                nth_last_chat_id = list(history_data.keys())[-load_nth_last]  # No adjusted index for reversed order
                 return {
-                    "response": nth_last_chat["turns"],
                     "response_to_agent": {"load_chat_history": nth_last_chat_id}
                 }
             except IndexError:
@@ -79,7 +77,6 @@ def load_chat_history(chat_id=None, load_nth_last=None, return_all=False):
         if chat_id in history_data:
             chat = history_data[chat_id]
             return {
-                "response": chat,
                 "response_to_agent": {"load_chat_history": chat_id}
             }
         else:

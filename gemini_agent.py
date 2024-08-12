@@ -18,7 +18,6 @@ class GeminiAgent:
         self.function_manager = FunctionManager(self.config_manager, self.chat_manager, self.output_manager, self.input_manager)
         self.model_manager = ModelManager(self.config_manager, self.state_manager, self.function_manager, self.output_manager, self.input_manager, self.chat_manager)
         self.function_manager.set_model_manager(self.model_manager)
-        
     def run(self):
         """Run the main user interaction loop."""
         self.model_manager.first_message()
@@ -43,14 +42,14 @@ class GeminiAgent:
                 function_response = self.function_manager.functions[function_name]()
             else:
                 function_response = self.function_manager.functions[function_name](args)
-            self.chat_manager.add_text_part('user', '')
+            self.chat_manager.add_text_part('user', function_name)
             self.chat_manager.add_function_call('model', function_name, args)
             self.model_manager.handle_function_response(function_name, function_response)
         else:
             self.chat_manager.add_text_part('user', user_input)
         self.model_manager.generate_content()
+        
 
     def exit(self):
         """Exit the main loop."""
-        self.output_manager.print("\n[bold italic yellow]Exiting...[/bold italic yellow]\n")
         exit()

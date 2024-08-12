@@ -1,12 +1,11 @@
 import os
 import importlib
 import inspect
-from pathlib import Path
-from time import sleep
-from google.ai.generativelanguage import FunctionDeclaration, Schema, Type
 import subprocess
 import sys
 import re
+
+from google.ai.generativelanguage import FunctionDeclaration, Schema, Type
 
 class FunctionManager:
     def __init__(self, config_manager, chat_manager, output_manager, input_manager):
@@ -26,7 +25,6 @@ class FunctionManager:
             functions_directory = os.path.join(self.config_manager.get_agent_directory(), "functions")
         else:
             functions_directory = os.path.join(self.config_manager.get_directory(), "functions")
-        
         if not os.path.exists(functions_directory):
             os.makedirs(functions_directory)
         else:
@@ -35,17 +33,15 @@ class FunctionManager:
                     try:
                         module_name = filename[:-3]
                         module_path = os.path.join(functions_directory, filename)
-                        
                         # Check and install missing dependencies
                         try:
                             self._check_and_install_dependencies(module_path)
                         except Exception as e:
                             self.output_manager.debug(f"Error checking and installing dependencies for '{filename}': {e}")
-                            continue
-                        
+
                         spec = importlib.util.spec_from_file_location(module_name, module_path)
                         module = importlib.util.module_from_spec(spec)
-
+                        spec.loader.exec_module(module)  # Ensure the module is executed
                         for func_name, func in module.__dict__.items():
                             if callable(func) and not func_name.startswith("__") and not inspect.isclass(func):
                                 functions[func_name] = func
@@ -146,4 +142,4 @@ class FunctionManager:
                 for file in response['files']:
                     self.chat_manager.add_file(file)
             if 'load_chat_history' in response:
-                self.functions['load_chat_history'](response['load_chat_history'])
+                self.chat_manager.load_chat(response['load_chat_history'])

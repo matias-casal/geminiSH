@@ -70,7 +70,6 @@ class ModelManager:
                 response = self.model.generate_content(self.chat_manager.current_chat)
             return self.handle_gemini_response(response)
         except Exception as e:
-            print(e)
             self.output_manager.print(f"An error occurred: {e}", style="bold red")
             choice = self.input_manager.choose("Do you want to retry?", choices=["yes", "no"], default="yes")
             if choice == "yes":
@@ -101,8 +100,13 @@ class ModelManager:
             try:
                 if 'text' in part:
                     self.output_manager.print(f"{part['text']}", style="blue", markdown=True)
-                    self.output_manager.print("\n")
+                    
+                    # Ensure part['text'] contains exactly one '\n' at the start and end
+                    part_text = part['text'].strip('\n')
+                    part['text'] = f"\n{part_text}\n"
+                    
                     self.chat_manager.add_text_part('model', part['text'])
+                    
                 if 'function_call' in part and part['function_call']:
                     self.output_manager.debug(f"Function call: {part['function_call']}")
                     with self.output_manager.managed_status("[yellow bold]Gemini is executing function...[/yellow bold]"):

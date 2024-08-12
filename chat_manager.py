@@ -68,6 +68,7 @@ class ChatManager:
         """Add a new part to the chat history."""
         if self.chat_history and self.chat_id in self.chat_history:
             last_turns = self.chat_history[self.chat_id]["turns"]
+
             if last_turns and last_turns[-1] and last_turns[-1]["role"] == role:
                 # Check if the last part has the same role and merge parts
                 self.current_chat[-1].parts.append(proto_part)
@@ -114,23 +115,27 @@ class ChatManager:
         
     def load_chat(self, chat_id):
         """Load a chat from history and create the current_chat with corresponding protos."""
-        if chat_id in self.chat_history:
-            self.chat_id = chat_id
-            self.current_chat = []
-            for turn in self.chat_history[chat_id]["turns"]:
-                role = turn["role"]
-                for part in turn["parts"]:
-                    if "text" in part:
-                        self.add_text_part(role, part["text"], save=False)
-                    elif "function_call" in part:
-                        self.add_function_call(role, part["function_call"]["name"], part["function_call"]["args"], save=False)
-                    elif "function_response" in part:
-                        self.add_function_response(role, part["function_response"]["name"], part["function_response"]["response"], save=False)
-                    elif "file_data" in part:
-                        expiry_time = datetime.fromisoformat(part["file_data"]["expiry_time"])
-                        if datetime.now() < expiry_time:
-                            self.add_file(part["file_data"], save=False)
-                        else:
-                            self.output_manager.warning(f"File {part['file_data']['original_path']} has expired and will not be loaded.")
-        else:
+        if chat_id not in self.chat_history:
             self.output_manager.error(f"Chat ID {chat_id} not found in history.")
+            return
+        
+        self.chat_id = chat_id
+        self.current_chat = []
+        chat_turns_len = len(self.chat_history[chat_id]["turns"])
+        for i in range(chat_turns_len):
+            turn = self.chat_history[chat_id]["turns"][i]
+            role = turn["role"]
+            for part in turn["parts"]:
+                if "text" in part:
+                    self.add_text_part(role, part["text"], save=False)
+                elif "function_call" in part:
+                    self.add_function_call(role, part["function_call"]["name"], part["function_call"]["args"], save=False)
+                elif "function_response" in part:
+                    self.add_function_response(role, part["function_response"]["name"], part["function_response"]["response"], save=False)
+                elif "file_data" in part:
+                    expiry_time = datetime.fromisoformat(part["file_data"]["expiry_time"])
+                    if datetime.now() < expiry_time:
+                        self.add_file(part["file_data"], save=False)
+                    else:
+                        self.output_manager.warning(f"File {part['file_data']['original_path']} has expired and will not be loaded.")
+                
