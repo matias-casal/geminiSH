@@ -152,3 +152,5 @@ Contributions to Gemini SH are welcome! You can contribute by:
 ### Acknowledgements
 
 This project is inspired by the power and flexibility of Google Gemini and the potential it holds for revolutionizing human-computer interaction.
+
+[![Watch the promotional video](https://img.youtube.com/vi/tSNp36ZvjlQ/0.jpg)](https://www.youtube.com/watch?v=tSNp36ZvjlQ)
