@@ -47,7 +47,7 @@ class GeminiAgent:
             self.model_manager.handle_function_response(function_name, function_response)
         else:
             self.chat_manager.add_text_part('user', user_input)
-        self.model_manager.generate_content()
+            self.model_manager.generate_content()
         
 
     def exit(self):

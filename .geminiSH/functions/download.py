@@ -1,7 +1,6 @@
 import os
 import mimetypes
 import urllib.request
-from rich.console import Console
 from rich.progress import (
     Progress,
     BarColumn,
@@ -31,7 +30,7 @@ progress = Progress(
 def download(url: str):
     """
     Download the content or the file of the given url.
-    If the user give you a url, use this function to analize the content of it.
+    IMPORTANT: Only use this function if the user give you a url.
 
     Parameters:
     url (str): The url of the web or file to download.

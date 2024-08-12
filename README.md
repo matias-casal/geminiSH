@@ -46,18 +46,90 @@ Gemini SH opens up a world of possibilities for interacting with your computer:
 - **Visual Context Awareness**: Take screenshots to provide Gemini with visual context for more relevant responses.
 - **Cross-Application Integration**: Use the clipboard to exchange data with other applications.
 
-### Getting Started
+## How to Install and Use Gemini SH (Updated)
 
-1. **Install Dependencies**: Ensure you have the required Python libraries installed.
-2. **Configure Gemini SH**:
-   - Set your Google Gemini API key in `config.json` or as an environment variable (`GOOGLE_API_KEY`).
-   - Configure other system settings in `config.json` if its needed.
-3. **Add Custom Functions**:
+This guide will walk you through the steps to install and start using Gemini SH, your personalized AI agent for enhanced productivity.
+
+**Prerequisites:**
+
+- **Python 3.6 or higher:** Gemini SH requires Python 3.6 or a later version to run. You can check your Python version by running `python --version` or `python3 --version` in your terminal.
+
+- **PIP (Package Installer for Python):** PIP is typically included with Python installations. You can verify its presence by running `pip --version` or `pip3 --version`.
+
+**Installation Steps:**
+
+1. **Clone the Repository:**
+
+   You can clone the Gemini SH repository from GitHub using the following command in your terminal:
+
+   ```bash
+   git clone https://github.com/matias-casal/geminiSH.git
+   ```
+
+2. **Navigate to the Directory:**
+
+   After cloning, navigate to the `geminiSH` directory:
+
+   ```bash
+   cd geminiSH
+   ```
+
+3. **Install Gemini SH:**
+
+   Install Gemini SH and its dependencies using PIP:
+
+   ```bash
+   pip install .
+   ```
+
+   Alternatively, you can install it directly from the cloned directory using:
+
+   ```bash
+   pip install geminish
+   ```
+
+4. **Set Your API Key:**
+
+   You need a Google Gemini API key to use Gemini SH. You can obtain one from the Google AI Studio. Once you have your API key, set it in the `config.json` file located in the `.geminiSH` directory:
+
+   ```json
+   {
+     "GOOGLE_API_KEY": "YOUR_API_KEY_HERE"
+     // ... other configurations
+   }
+   ```
+
+   Alternatively, you can set the API key as an environment variable:
+
+   ```bash
+   export GOOGLE_API_KEY="YOUR_API_KEY_HERE"
+   ```
+
+**Using Gemini SH:**
+
+1. **Start the Interactive Chat:**
+
+   To start the interactive chat session, run the following command in your terminal:
+
+   ```bash
+   geminiSH
+   ```
+
+2. **Interact with the Agent:**
+
+   You can now interact with the Gemini SH agent using natural language. You can ask questions, give commands, and even execute custom functions.
+
+3. **Execute Functions Directly:**
+
+   You can also execute functions directly from the command line. For example, for give voice commands execute the `record` function with a specific file path:
+
+   ```bash
+   geminiSH record
+   ```
+
+4. **Add Custom Functions**:
    - Create Python scripts in the `functions` directory, defining your desired functions.
    - Use docstrings to provide clear and comprehensive descriptions of each function for the model to understand.
-4. **Run Gemini SH**:
-   - Execute `python main.py` to start the interactive chat session.
-   - Alternatively, execute `python main.py <function_name> <arguments>` to directly execute a function from the command line.
 
 ### Contributing
 

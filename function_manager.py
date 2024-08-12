@@ -45,6 +45,7 @@ class FunctionManager:
                         for func_name, func in module.__dict__.items():
                             if callable(func) and not func_name.startswith("__") and not inspect.isclass(func):
                                 functions[func_name] = func
+                                self.output_manager.debug(f"Function loaded: {func_name}")
                     except Exception as e:
                         self.output_manager.debug(f"Error loading function from '{filename}': {e}")
         

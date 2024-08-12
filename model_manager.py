@@ -100,12 +100,8 @@ class ModelManager:
             try:
                 if 'text' in part:
                     self.output_manager.print(f"{part['text']}", style="blue", markdown=True)
-                    
-                    # Ensure part['text'] contains exactly one '\n' at the start and end
                     part_text = part['text'].strip('\n')
-                    part['text'] = f"\n{part_text}\n"
-                    
-                    self.chat_manager.add_text_part('model', part['text'])
+                    self.chat_manager.add_text_part('model', f"{part_text}\n  ")
                     
                 if 'function_call' in part and part['function_call']:
                     self.output_manager.debug(f"Function call: {part['function_call']}")
@@ -131,3 +127,4 @@ class ModelManager:
                 self.chat_manager.add_function_response('user', function_name, function_response['response'])
             if 'response_to_agent' in function_response:
                 self.function_manager.handle_functions_response(function_response['response_to_agent'])
+        self.generate_content()
