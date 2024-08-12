@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="geminiSH",
-    version="1.0.1",
+    version="1.0.2",
     packages=find_packages(),
     description="Tool based on Google`s Gemini to work on diferents code bases.",
     long_description=open("README.md").read(),

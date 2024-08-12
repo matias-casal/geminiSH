@@ -58,6 +58,12 @@ This guide will walk you through the steps to install and start using Gemini SH,
 
 **Installation Steps:**
 
+You can install it directly from the cloned directory using:
+
+```bash
+pip install geminish
+```
+
 1. **Clone the Repository:**
 
    You can clone the Gemini SH repository from GitHub using the following command in your terminal:
@@ -80,12 +86,6 @@ This guide will walk you through the steps to install and start using Gemini SH,
 
    ```bash
    pip install .
-   ```
-
-   Alternatively, you can install it directly from the cloned directory using:
-
-   ```bash
-   pip install geminish
    ```
 
 4. **Set Your API Key:**
@@ -121,7 +121,7 @@ This guide will walk you through the steps to install and start using Gemini SH,
 
 3. **Execute Functions Directly:**
 
-   You can also execute functions directly from the command line. For example, for give voice commands execute the `record` function with a specific file path:
+   You can also execute functions directly from the command line. For example, to start recording and give voice commands, execute the `record` function:
 
    ```bash
    geminiSH record
@@ -142,10 +142,10 @@ Contributions to Gemini SH are welcome! You can contribute by:
 
 ### Future Directions
 
-- **Voice Recognition**: Integrate with voice recognition libraries for seamless voice-based interactions.
-- **GUI Integration**: Explore options for integrating Gemini SH with a graphical user interface for a more user-friendly experience.
-- **Plugin System**: Develop a plugin system to enable users to easily extend the system's functionalities without modifying the core codebase.
-- **Enhanced Context Awareness**: Explore techniques for providing Gemini with more context from the user's system, such as active applications, recent files, and browser history.
+- **Enhanced System Capabilities**: Continuously improve the core functionalities to provide more robust and versatile interactions.
+- **Advanced Prompt Engineering**: Develop and refine prompts to elicit more accurate and contextually relevant responses from the AI.
+- **User Experience Optimization**: Focus on enhancing the user interface and experience, making interactions more intuitive and efficient.
+- **Contextual Awareness**: Implement techniques to provide the AI with better context from the user's environment, such as active applications and recent files.
 
 ### Acknowledgements
 
