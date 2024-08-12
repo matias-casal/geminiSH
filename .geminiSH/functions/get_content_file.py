@@ -30,15 +30,15 @@ def get_content_file(file_path):
                 with open(file_path, "r", encoding="utf-8") as f:
                     f.read(num_bytes)
                 with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
+                    lines = f.readlines()
+                    
                 file_name = os.path.basename(file_path)
-                content = (
-                    f"---Start of file {file_name}---\n"
-                    f"{content}\n"
-                    f"---End of file {file_name}---"
-                )
+                content = [f"---Start of file {file_name}---"]
+                content.extend(lines)
+                content.append(f"---End of file {file_name}---")
+                content_str = "".join(content)
                 return {
-                    "response": content,
+                    "response": content_str,
                     "response_to_agent": {"require_execution_result": True},
                 }
             except (UnicodeDecodeError, IOError):
