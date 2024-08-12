@@ -17,14 +17,13 @@ class ModelManager:
         self.model = self.init_model()
 
     def first_message(self):
-        """Método para enviar el primer mensaje al modelo."""
+        """Method to send the first message to the model."""
         self.output_manager.print(f"\n\n# {self.MODEL_PRESENTATION}", style="bold bright_yellow", markdown=True)
         if self.state_manager.is_first_run():    
             first_runs_path = os.path.join(self.config_manager.directory, "prompts", "first_runs.md")
             if os.path.exists(first_runs_path):
                 with open(first_runs_path, "r") as f:
                     first_runs_text = f.read()
-                    self.chat_manager.add_text_part('model', first_runs_text)
                     self.output_manager.print(first_runs_text, style="blue", markdown=True)
     
     def get_api_key(self):
@@ -43,7 +42,7 @@ class ModelManager:
         return api_key
     
     def init_model(self):
-        """Inicializa el modelo y trae las funciones declaradas."""
+        """Initializes the model and fetches the declared functions."""
         model_name = self.config_manager.config["MODEL_NAME"]
         # max_output_tokens = self.config_manager.config["MODEL_MAX_OUTPUT_TOKENS"]
         safety_settings = self.config_manager.config["MODEL_SAFETY_SETTINGS"]
@@ -62,7 +61,7 @@ class ModelManager:
         return model
             
     def generate_content(self):
-        """Método para enviar un mensaje al modelo."""
+        """Method to send a message to the model."""
         if DEBUG:   
             for part in self.chat_manager.current_chat:
                 self.output_manager.debug(f"Chat part: {part}", 2)
@@ -78,7 +77,7 @@ class ModelManager:
                 return self.generate_content()
     
     def message_to_proto(self, message):
-        """Convierte un mensaje en un objeto proto Content."""
+        """Converts a message into a proto Content object."""
         if isinstance(message, str):
             return Content(
                 role="user",
@@ -118,10 +117,13 @@ class ModelManager:
                 print(e)
                 
         for function_name, response in function_responses:
-            if isinstance(response, str):
-                self.chat_manager.add_function_response('user', function_name, response)
-            elif isinstance(response, dict):
-                if 'response' in response:
-                    self.chat_manager.add_function_response('user', function_name, response['response'])
-                if 'response_to_agent' in response:
-                    self.function_manager.handle_agent_functions_response(response['response_to_agent'])
+            self.handle_function_response(function_name, response)
+                
+    def handle_function_response(self, function_name, function_response):
+        if isinstance(function_response, str):
+            self.chat_manager.add_function_response('user', function_name, function_response)
+        elif isinstance(function_response, dict):
+            if 'response' in function_response:
+                self.chat_manager.add_function_response('user', function_name, function_response['response'])
+            if 'response_to_agent' in function_response:
+                self.function_manager.handle_functions_response(function_response['response_to_agent'])

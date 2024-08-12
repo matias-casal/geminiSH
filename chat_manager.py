@@ -7,7 +7,7 @@ from google.protobuf.struct_pb2 import Struct
 from google.ai.generativelanguage import FunctionCall, FunctionResponse, Content, Part, FileData
 from prompt_toolkit.history import FileHistory
 
-FIRST_RUN_THRESHOLD = int(os.getenv("FIRST_RUN_THRESHOLD", 100))
+FIRST_RUN_THRESHOLD = int(os.getenv("FIRST_RUN_THRESHOLD", 10))
 
 class ChatManager:
     HISTORY_FILE_NAME = "history.json"
@@ -23,7 +23,7 @@ class ChatManager:
         self.current_chat = []
 
     def check_chat_history(self):
-        """Carga el historial de chat desde el archivo history.json."""
+        """Load chat history from the history.json file."""
         history_file = os.path.join(self.config_manager.directory, self.HISTORY_FILE_NAME)
         if os.path.exists(history_file):
             with open(history_file, "r") as f:
@@ -49,14 +49,14 @@ class ChatManager:
             return {}            
 
     def create_chat(self):
-        """Crea un nuevo chat."""
+        """Creates a new chat."""
         self.chat_history[self.chat_id] = {
             "turns": [],
             "created_at": datetime.now().isoformat()
         }
 
     def save_chat_history(self):
-        """Guarda el historial de chat en el archivo history.json."""
+        """Save chat history to the history.json file."""
         if self.config_manager.is_agent:
             history_file = os.path.join(self.config_manager.agent_directory, self.HISTORY_FILE_NAME)
         else:
@@ -65,7 +65,7 @@ class ChatManager:
             json.dump(self.chat_history, f, indent=4)
 
     def add_part(self, part, proto_part, role, save=True):
-        """Adds a new part to the chat history."""
+        """Add a new part to the chat history."""
         if self.chat_history and self.chat_id in self.chat_history:
             last_turns = self.chat_history[self.chat_id]["turns"]
             if last_turns and last_turns[-1] and last_turns[-1]["role"] == role:
@@ -85,19 +85,22 @@ class ChatManager:
 
 
     def add_text_part(self, role, text, save=True):
-        """Adds a new user message to the chat history."""
+        """Add a new user message to the chat history."""
         part = {"text": text}
         proto_part = Part(text=text)
         self.add_part(part, proto_part, role, save)
 
     def add_function_call(self, role, function_name, function_args, save=True):
-        """Adds a new function call to the chat history."""
+        """Add a new function call to the chat history."""
         part = {"function_call": {"name": function_name, "args": function_args}}
-        proto_part = Part(function_call=FunctionCall(name=function_name, args=function_args))
+        if function_args:
+            proto_part = Part(function_call=FunctionCall(name=function_name, args=function_args))
+        else:
+            proto_part = Part(function_call=FunctionCall(name=function_name))
         self.add_part(part, proto_part, role, save)
         
     def add_function_response(self, role, function_name, function_response, save=True):
-        """Adds a new function response to the chat history."""
+        """Add a new function response to the chat history."""
         part = {"function_response": {"name": function_name, "response": function_response}}
         proto_struct_response = Struct()
         proto_struct_response.update({"response": function_response})
@@ -105,12 +108,12 @@ class ChatManager:
         self.add_part(part, proto_part, role, save)
 
     def add_file(self, file, save=True):
-        """Adds a new file to the chat history."""
+        """Add a new file to the chat history."""
         proto_part = Part(file_data=FileData(mime_type=file['mime_type'], file_uri=file['uri']))
         self.add_part(file, proto_part, "user", save)
         
     def load_chat(self, chat_id):
-        """Loads a chat from history and creates the current_chat with corresponding protos."""
+        """Load a chat from history and create the current_chat with corresponding protos."""
         if chat_id in self.chat_history:
             self.chat_id = chat_id
             self.current_chat = []

@@ -12,7 +12,7 @@ class StateManager:
         self.init_state()
 
     def init_state(self):
-        """Inicializa el estado de la aplicación."""
+        """Initialize the application state."""
         # Load the system instructions from the config
         if self.config_manager.is_agent:
             agent_instructions_path = os.path.join(self.config_manager.get_agent_directory(), "prompts", "system_instructions.md")
@@ -30,10 +30,9 @@ class StateManager:
             raise Exception("System instructions not found.")
 
     def is_first_run(self):
-        """Verifica si es la primera vez que se ejecuta la aplicación."""
+        """Check if it is the first time the application is run."""
         return self.state.get("is_first_run", False)
 
     def set_first_run(self, is_first_run):
-        """Establece el estado de la primera ejecución."""
+        """Set the first run state."""
         self.state["is_first_run"] = is_first_run
-        

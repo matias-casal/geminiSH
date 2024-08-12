@@ -48,7 +48,7 @@ Gemini SH opens up a world of possibilities for interacting with your computer:
 
 ### Getting Started
 
-1. **Install Dependencies**: Ensure you have the required Python libraries installed. You can find a list of dependencies in the `requirements.txt` file (to be created).
+1. **Install Dependencies**: Ensure you have the required Python libraries installed.
 2. **Configure Gemini SH**:
    - Set your Google Gemini API key in `config.json` or as an environment variable (`GOOGLE_API_KEY`).
    - Configure other system settings in `config.json` if its needed.

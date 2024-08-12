@@ -8,8 +8,8 @@ DEBUG = os.getenv('DEBUG')
 
 def get_content_file(file_path):
     """
-    Processes a single file and get the content.
-    If the user want to work with a single file, execute this function first, and wait for the response.
+    Processes a single file and gets the content.
+    If the user wants to work with a single file, execute this function first, and wait for the response.
 
     Parameters:
     file_path (str): The absolute path of the file to process.
@@ -36,7 +36,6 @@ def get_content_file(file_path):
                 mime_type, _ = mimetypes.guess_type(file_path)
                 if mime_type in SUPPORTED_MIME_TYPES:
                     return {
-                        "response": "The file is ready, follow the user instructions.",
                         "response_to_agent": {"files_to_upload": [file_path], 'require_execution_result': True}
                     }
                 else:

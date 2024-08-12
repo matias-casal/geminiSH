@@ -1,6 +1,6 @@
 import os
 import mimetypes
-from urllib.request import urlopen
+import urllib.request
 from rich.console import Console
 from rich.progress import (
     Progress,
@@ -42,7 +42,7 @@ def download(url: str):
     SUPPORTED_MIME_TYPES = output_manager.config_manager.config["MODEL_SUPPORTED_MIME_TYPES"]
     try:
         filename = url.split("/")[-1]
-        response = urlopen(url)
+        response = urllib.request.urlopen(url)
         mime_type, _ = mimetypes.guess_type(url)
         
         # Check MIME type and process accordingly
@@ -62,11 +62,11 @@ def download(url: str):
                             progress.update(task_id, advance=len(data))
             
             return {
-                "response": "The file is ready, follow the user instructions.",
+                "response": "The file is ready, uset it.",
                 "response_to_agent": {"files_to_upload": [dest_path], 'require_execution_result': True}
             }
         
-        elif "text" in mime_type:
+        elif mime_type and "text" in mime_type:
             content = response.read().decode('utf-8')
             content = f"---Start content of web: {url}---\n{content}\n---End of content of web---"
             return content

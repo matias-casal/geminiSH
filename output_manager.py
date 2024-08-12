@@ -22,7 +22,7 @@ class OutputManager:
             self.config_manager = config_manager
             
     def print(self, text, markdown=False, style="", end="\n"):
-        """Imprime texto en la consola."""
+        """Prints text to the console."""
         if not text:
             return
         if markdown:
@@ -31,7 +31,7 @@ class OutputManager:
             self.console.print(text, end=end)
                 
     def debug(self, text, level=1):
-        """Imprime texto en la consola segun el nivel de debug."""
+        """Prints text to the console according to the debug level."""
         caller_frame = inspect.stack()[1]
         caller_info = f"{caller_frame.function} in {caller_frame.filename.split('/')[-1]}:{caller_frame.lineno}"
         if DEBUG:
@@ -43,7 +43,7 @@ class OutputManager:
                 self.print(f"[red][bold italic]DEBUG:[/bold italic] {text}[/red]\n[italic][blue]({caller_info})[/blue][/italic]")
             
     def warning(self, text):
-        """Imprime texto en la consola como un warning."""
+        """Prints text to the console as a warning."""
         self.console.print(f"[yellow][bold]WARNING:[/bold] {text}[/yellow]")
 
     @contextmanager
@@ -67,7 +67,7 @@ class OutputManager:
     @contextmanager
     def stop_status(self):
         """
-        Detiene el estado actual, ejecuta una acción y reinicia el estado.
+        Stops the current status, performs an action, and restarts the status.
         """
         if self._status_stack:
             self._status_stack[-1].stop()

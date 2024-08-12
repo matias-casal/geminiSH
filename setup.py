@@ -21,7 +21,7 @@ setup(
         'soundfile',
         'pydub',
         'unidiff'
-    ]
+    ],
     entry_points={
         'console_scripts': [
             'geminiSH=geminiSH.main:main',

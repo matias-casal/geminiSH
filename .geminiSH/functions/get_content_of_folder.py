@@ -9,11 +9,11 @@ DEBUG = os.getenv('DEBUG')
 
 def get_content_of_folder(directory_path, recursive=True):
     """
-    Processes a directory and get the content. 
-    If the user wants to work with a folder or it refers to a content of a folder, execute this function first, and wait for the response.
+    Processes a directory and retrieves the content. 
+    If the user wants to work with a folder or it refers to a content of a folder, this function is executed first, and the response is awaited.
 
     Parameters:
-    directory_path (str): The path of the directory to process. Do not inclute '*'.
+    directory_path (str): The path of the directory to process. Do not include '*'.
     recursive (bool): Whether to process directories recursively. Default is True.
 
     Returns:

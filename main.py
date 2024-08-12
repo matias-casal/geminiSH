@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
+
 import os
-import traceback
 from gemini_agent import GeminiAgent
 
 DEBUG = os.environ.get("DEBUG", False)

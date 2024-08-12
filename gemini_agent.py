@@ -20,10 +20,10 @@ class GeminiAgent:
         self.function_manager.set_model_manager(self.model_manager)
         
     def run(self):
-        """Ejecuta el bucle principal de interacción con el usuario."""
+        """Run the main user interaction loop."""
         self.model_manager.first_message()
         
-        # Procesar argumentos si existen
+        # Process arguments if they exist
         args = sys.argv[1:]
         if args:
             initial_input = ' '.join(args)
@@ -34,17 +34,23 @@ class GeminiAgent:
             self.process_message(user_input)
 
     def process_message(self, user_input):
-        """Procesa el mensaje introducido por el usuario."""
+        """Process the message entered by the user."""
         if len(user_input.split()) == 1 and user_input.lower() in self.function_manager.functions.keys():
             parts = user_input.split()
             function_name = parts[0].lower()
-            args = ' '.join(parts[1:])
-            self.function_manager.functions[function_name](args)
+            args = ' '.join(parts[1:]) if len(parts) > 1 else None
+            if args is None:
+                function_response = self.function_manager.functions[function_name]()
+            else:
+                function_response = self.function_manager.functions[function_name](args)
+            self.chat_manager.add_text_part('user', '')
+            self.chat_manager.add_function_call('model', function_name, args)
+            self.model_manager.handle_function_response(function_name, function_response)
         else:
             self.chat_manager.add_text_part('user', user_input)
-            self.model_manager.generate_content()
+        self.model_manager.generate_content()
 
     def exit(self):
-        """Salir del bucle principal."""
+        """Exit the main loop."""
         self.output_manager.print("\n[bold italic yellow]Exiting...[/bold italic yellow]\n")
         exit()

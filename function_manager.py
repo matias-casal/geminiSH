@@ -20,7 +20,7 @@ class FunctionManager:
             self.functions.update(agent_functions)
             
     def load_functions(self, is_agent=False):
-        """Carga las funciones desde la carpeta functions y verifica las dependencias."""
+        """Load functions from the functions folder and check dependencies."""
         functions = {}
         if is_agent:
             functions_directory = os.path.join(self.config_manager.get_agent_directory(), "functions")
@@ -45,7 +45,6 @@ class FunctionManager:
                         
                         spec = importlib.util.spec_from_file_location(module_name, module_path)
                         module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(module)
 
                         for func_name, func in module.__dict__.items():
                             if callable(func) and not func_name.startswith("__") and not inspect.isclass(func):
@@ -55,12 +54,12 @@ class FunctionManager:
         
         if not functions and not is_agent:
             self.output_manager.debug(f'functions_directory: {functions_directory}')
-            self.output_manager.warning("No se encontraron funciones en el modo default, lo cual no es normal. Gemini se ejecutara sin sus funciones basicas.")
+            self.output_manager.warning("No functions found in default mode, which is not normal. Gemini will run without its basic functions.")
 
         return functions
     
     def _check_and_install_dependencies(self, module_path):
-        """Verifica e instala las dependencias necesarias para un módulo."""
+        """Check and install necessary dependencies for a module."""
         with open(module_path, "r") as file:
             content = file.read()
         
@@ -75,21 +74,22 @@ class FunctionManager:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", package.split('.')[0]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 
     def set_model_manager(self, model_manager):
-        """Establece el model_manager después de la inicialización."""
+        """Set the model_manager after initialization."""
         self.model_manager = model_manager
         
     def get_as_declarations(self):
-        """Convierte las funciones en declaraciones de función."""
+        """Convert functions into function declarations."""
         return [self._create_function_declaration(func) for func in self.functions.values()]
 
     def _create_function_declaration(self, func):
-        """Crea una declaración de función a partir de una función de Python."""
+        """Create a function declaration from a Python function."""
         func_name = func.__name__
         func_doc = func.__doc__.strip() if func.__doc__ else "No description provided."
         func_signature = inspect.signature(func)
         properties = {}
         required = []
-        for param_name, param in func_signature.parameters.items():
+        params_items = func_signature.parameters.items()
+        for param_name, param in params_items:
             param_type = self._convert_python_type_to_proto_type(param.annotation)
             properties[param_name] = param_type
             if param.default == inspect._empty:
@@ -102,11 +102,11 @@ class FunctionManager:
                 type_=Type.OBJECT,
                 properties=properties,
                 required=required
-            )
+            ) if params_items else None
         )
 
     def _convert_python_type_to_proto_type(self, python_type):
-        """Convierte un tipo de Python a un tipo proto correspondiente."""
+        """Convert a Python type to a corresponding proto type."""
         actual_type = python_type[1] if isinstance(python_type, tuple) else python_type
         if actual_type == str:
             return Schema(type_=Type.STRING)
@@ -119,13 +119,13 @@ class FunctionManager:
         elif isinstance(actual_type, list):
             item_type = self._convert_python_type_to_proto_type(actual_type[0])
             return Schema(type=Type.ARRAY, items=item_type)
-        elif actual_type == dict:
+        elif isinstance(actual_type, dict):
             return Schema(type_=Type.OBJECT)
         else:
             return Schema(type_=Type.STRING)
 
     def execute_function(self, function_name, args):
-        """Ejecuta una función con los argumentos proporcionados."""
+        """Execute a function with the provided arguments."""
         if function_name in self.functions:
             try:
                 return self.functions[function_name](**args)
@@ -134,8 +134,8 @@ class FunctionManager:
         else:
             return f"[error]Function not found: {function_name}[/error]"
         
-    def handle_agent_functions_response(self, response):
-        """Maneja la respuesta de una función del agente."""
+    def handle_functions_response(self, response):
+        """Handles the response of a function."""
         if isinstance(response, dict):
             if 'files_to_upload' in response:
                 file_paths = response['files_to_upload']
@@ -145,8 +145,5 @@ class FunctionManager:
             if 'files' in response:
                 for file in response['files']:
                     self.chat_manager.add_file(file)
-            if 'require_execution_result' in response:
-                self.model_manager.generate_content()
             if 'load_chat_history' in response:
                 self.functions['load_chat_history'](response['load_chat_history'])
-            

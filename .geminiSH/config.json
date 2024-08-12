@@ -6,7 +6,7 @@
   "SAVE_PROMPT_HISTORY": true,
   "SAVE_OUTPUT_HISTORY": true,
   "WARNING_TOKENS_THRESHOLD": 0.9,
-  "MODEL_NAME": "gemini-1.5-pro",
+  "MODEL_NAME": "gemini-1.5-pro-latest",
   "MODEL_MAX_TOKENS": 2097152,
   "MODEL_SAFETY_SETTINGS": {
     "HATE": "BLOCK_NONE",

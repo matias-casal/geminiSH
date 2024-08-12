@@ -19,10 +19,10 @@ class InputManager:
             self.output_manager = output_manager
             self.history = InMemoryHistory()
             
-            # Definir las asociaciones de teclas
+            # Define key bindings
             kb = KeyBindings()
 
-            # Asociar la tecla Tab al autocompletado
+            # Bind Tab key to autocomplete
             @kb.add(Keys.Tab)
             def _(event):
                 b = event.current_buffer
@@ -30,7 +30,7 @@ class InputManager:
                 if suggestion:
                     b.insert_text(suggestion.text)
 
-            # Crear la sesión con las nuevas asociaciones de teclas
+            # Create session with new key bindings
             self.session = PromptSession(
                 history=self.history,
                 auto_suggest=AutoSuggestFromHistory(),
@@ -46,6 +46,6 @@ class InputManager:
             return self.session.prompt()
         
     def choose(self, text, choices, default=None):
-        """Imprime texto en la consola y espera una respuesta del usuario."""
+        """Print text to console and wait for user response."""
         with self.output_manager.stop_status():
             return Prompt.ask(f"[yellow]{text}[/yellow]", choices=choices, default=default)

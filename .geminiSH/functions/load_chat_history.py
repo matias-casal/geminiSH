@@ -12,8 +12,8 @@ def load_chat_history(chat_id=None, load_nth_last=None, return_all=False):
     """
     Load chat history from history.json.
     Use this function if the user refers to a previous chat.
-    If the user ask you something about your previous conversations, use the return_all parameter.
-    In case that the response with return_all is an error, ask the user if it wants to search and choose a chat from a list.
+    If the user asks you something about your previous conversations, use the return_all parameter.
+    In case that the response with return_all is an error, ask the user if they want to search and choose a chat from a list.
 
     Args:
         chat_id (str, optional): The ID of the chat to load. If not provided, a list of available chats will be shown.
@@ -21,7 +21,7 @@ def load_chat_history(chat_id=None, load_nth_last=None, return_all=False):
         return_all (bool, optional): If True, return all chat history.
     
     Returns:
-        str: The chat id after the user selects one or a error message.
+        str: The chat id after the user selects one or an error message.
     """
 
     try:

@@ -82,6 +82,5 @@ def upload_files(file_paths: list, expiry_time: str = '', force_upload: bool = F
 
     output_manager.debug(f"Uploaded files: {uploaded_files}")
     return {
-        "response": "The files are ready, follow the user instructions.",
         "response_to_agent": {"files": uploaded_files, 'require_execution_result': True}
     }

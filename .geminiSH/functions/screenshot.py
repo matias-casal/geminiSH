@@ -1,7 +1,7 @@
 import pyautogui
 import os
 import uuid
-from screeninfo import get_monitors
+import screeninfo
 from output_manager import OutputManager
 
 output_manager = OutputManager()
@@ -10,8 +10,7 @@ DEBUG = os.getenv('DEBUG')
 
 def take_screenshot(monitor_index=None):
     """
-    Take a screenshot of one or all monitors and save it to the cache directory. If the users referes to what you see in
-    the screen, or say something like "what do you see" in the computer, or screen, use this function.
+    This function takes a screenshot of one or all monitors and saves it to the cache directory. It is used when the user refers to what is visible on the screen or asks something like "what do you see" on the computer or screen.
     
     Parameters:
     monitor_index (int, optional): The index of the monitor to capture. If not provided, captures all monitors.
@@ -20,8 +19,8 @@ def take_screenshot(monitor_index=None):
     files: The screenshots taken.
     """
     try:
-        # Detectar el número de pantallas
-        monitors = get_monitors()
+        # Detect the number of screens
+        monitors = screeninfo.get_monitors()
         screenshots = []
         save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'cache')
         
@@ -30,21 +29,21 @@ def take_screenshot(monitor_index=None):
             os.makedirs(save_path)
         
         if monitor_index is not None:
-            # Validar el índice del monitor
+            # Validate the monitor index
             if monitor_index < 0 or monitor_index >= len(monitors):
                 raise ValueError("Invalid monitor index")
             monitors = [monitors[monitor_index]]
 
         with output_manager.managed_status("[bold yellow]Taking screenshot...[/bold yellow]"):
             for monitor in monitors:
-                # Generar un UUID para el nombre del archivo
+                # Generate a UUID for the file name
                 file_name = f"{uuid.uuid4()}.png"
                 file_path = os.path.join(save_path, file_name)
                 
-                # Tomar una captura de pantalla del monitor específico
+                # Take a screenshot of the specific monitor
                 screenshot = pyautogui.screenshot(region=(monitor.x, monitor.y, monitor.width, monitor.height))
                 
-                # Guardar la captura de pantalla
+                # Save the screenshot
                 screenshot.save(file_path)
                 screenshots.append(file_path)
         

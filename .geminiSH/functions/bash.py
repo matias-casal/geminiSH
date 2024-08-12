@@ -12,7 +12,6 @@ def bash(command: str, sensitive: bool = False, user_should_see_output: bool = F
     For example, you can chain multiple commands together using operators like `&&` or `||`.
     If the command will respond the users request directly, set user_should_see_output to True, if you need to analyze the output, set it to False.
     If you need to analyze the output to give the user a full response, set need_to_analyze_output to True
-    Use the system information to craft the right command, for example you can open files to show to the user in a mac with the command `open <file_path>`, or in a linux with `xdg-open <file_path>`.
     Do not use this function to edit text files.
     
     Parameters:

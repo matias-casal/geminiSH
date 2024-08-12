@@ -12,17 +12,15 @@ output_manager = OutputManager()
 
 DEBUG = os.getenv('DEBUG')
 
-def record(device_index: int = 0):
+def record():
     """
-    Record audio from the computer microphone.
+    Record audio from the user's computer microphone.
+    The user could control when to stop the recording (and could re record if needed).
     If the users want to record an audio or talk to you, execute this function.
-    If you dont specify the device_index, it will record from the default device.
-    
-    Parameters:
-    device_index (int): The index of the device to record from.
+    If the users dont give you clear instructions, check the record uploaded, it probably contains instructions.
 
     Returns:
-    file: The audio file.
+    file: The audio file record by the user.
     """
     def callback(indata, frames, time, status):
         q.put(indata.copy())
@@ -60,12 +58,11 @@ def record(device_index: int = 0):
             action = Prompt.ask("[yellow]Do you want to [bold]send[/bold], [bold]re-record[/bold], or [bold]cancel[/bold] the recording?[/yellow]", choices=["send", "re", "cancel"], default="send")
             if action == "send":
                 return {
-                    "response": "The recording is ready, follow the user instructions.",
                     "response_to_agent": {"files_to_upload": [mp3_filename], 'require_execution_result': True}
                 }
             elif action == "re":
                 output_manager.print("[bold yellow]Re-recording...[/bold yellow]")
-                return record(device_index)
+                return record()
             elif action == "cancel":
                 os.remove(mp3_filename)  # Remove the MP3 file
                 return "[info]Recording cancelled[/info]"

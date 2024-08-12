@@ -1,4 +1,3 @@
-
 import os
 import json
 import platform
@@ -22,27 +21,27 @@ class ConfigManager:
                 self.config.update(self.config_agent)
         
     def load_config(self, file_path, raise_error=False):
-        """Carga la configuración principal desde el archivo config.json."""
+        """Load the main configuration from the config.json file."""
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 return json.load(f)
         elif raise_error:
-            raise FileNotFoundError(f"El archivo de configuración: {file_path} no se encontró y por lo tanto no se puede continuar")
+            raise FileNotFoundError(f"The configuration file: {file_path} was not found and therefore cannot continue")
         else:
             return None
 
     def get_directory(self):
-        """Devuelve la ruta del directorio donde se encuentra el programa."""
+        """Return the directory path where the program is located."""
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), self.DEFAULT_DIR)
 
     def get_agent_directory(self):
-        """Devuelve la ruta del directorio del agente."""
+        """Return the agent directory path."""
         return os.path.join(os.getcwd(), self.config.get("AGENT_DIR", self.DEFAULT_DIR))
 
     
     def get_system_information(self):
-        """Devuelve la información del sistema."""
-        datos_sistema = {
+        """Return the system information."""
+        system_data = {
             "system_name": os.uname().sysname,
             "system_version": os.uname().version,
             "system_architecture": os.uname().machine,
@@ -56,4 +55,4 @@ class ConfigManager:
             "node_name": platform.node(),               
             "system_uname": platform.uname(),           
         }
-        return "\n".join([f"{key}: {value}" for key, value in datos_sistema.items()])
+        return "\n".join([f"{key}: {value}" for key, value in system_data.items()])
